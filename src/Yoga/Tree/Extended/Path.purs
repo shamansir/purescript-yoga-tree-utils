@@ -8,6 +8,7 @@ import Data.Tuple.Nested ((/\), type (/\))
 import Data.String (joinWith) as String
 
 
+import Debug as Debug
 -- TODO: duplicates `Zipper.Loc` / depth first ?
 -- TODO: if not, use `Zipper.Loc` with `Path`
 
@@ -47,14 +48,21 @@ find (Path path) =
 with :: forall a. Path -> (Tree a -> Tree a) -> Tree a -> Tree a
 with (Path path) f =
     if (Array.length path > 0)
-    then flip with' $ Array.reverse path
+    then flip with' path
     else f
     where
         with' node rempath =
             case Array.uncons rempath of
                 Just { head, tail } ->
                     YX.node (YX.value node)
-                        $ Array.mapWithIndex (\idx child -> if idx == head then f child else with' child tail)
+                        $ Array.mapWithIndex (\idx child ->
+                            if idx == head then
+                                if (Array.length tail > 0) then
+                                    with' child tail
+                                else
+                                    f child
+                            else child
+                        )
                         $ YX.children node
                 Nothing -> node
 

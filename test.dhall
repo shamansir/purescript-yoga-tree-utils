@@ -6,5 +6,8 @@ in conf // {
     conf.dependencies #
     [ "spec"
     , "aff"
+    , "debug"
+    , "exceptions"
+    , "transformers"
     ]
 }

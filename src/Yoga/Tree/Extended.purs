@@ -7,7 +7,7 @@ import Data.Maybe (Maybe, fromMaybe)
 import Data.Array (catMaybes) as Array
 import Data.Traversable (sequence)
 
-import Yoga.Tree (Tree, leaf, mkTree, setNodeValue) as Y
+import Yoga.Tree (Tree, leaf, mkTree, setNodeValue, modifyNodeValue) as Y
 
 
 type Tree n = Y.Tree n
@@ -36,6 +36,10 @@ break f t =
 
 set :: forall n. n -> Tree n -> Tree n
 set = Y.setNodeValue
+
+
+update :: forall n. (n -> n) -> Tree n -> Tree n
+update = Y.modifyNodeValue
 
 
 catMaybes :: forall n. n -> Tree (Maybe n) -> Tree n
