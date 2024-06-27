@@ -30,12 +30,13 @@ fill = YX.break \a -> YX.node (Path [] /\ a) <<< Array.mapWithIndex (fill' [])
         fill' path idx =
             let curPath = Array.snoc path idx
             in YX.break \a -> YX.node (Path curPath /\ a) <<< Array.mapWithIndex (fill' curPath)
+    -- TODO: same as `traverse \path _ _ -> path`
 
 
 find :: forall a. Path -> Tree a -> Maybe (Tree a)
 find (Path path) =
     if (Array.length path > 0)
-    then flip find' $ Array.reverse path
+    then flip find' path
     else Just
     where
         find' parent rempath =
