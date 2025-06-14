@@ -168,13 +168,12 @@ main = launchAff_ $ runSpec [consoleReporter] do
         failToFind :: forall (m :: Type -> Type) a. MonadThrow Ex.Error m => Show a => Tree a -> Path -> m Unit
         failToFind tree path =
           case Tree.find path tree of
-            Just _ ->
-              fail $ "expected to find nothing at " <> show path
+            Just what ->
+              fail $ "expected to find nothing at " <> show path <> ", but found " <> showTree what
             Nothing -> pure unit
 
       it "`find` on a one-leaf tree" $
         findIn (Tree.leaf "a") (Path []) (Tree.leaf "a")
-
       it "`find` on a node with children" $ do
         let tree = Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.leaf "d", Tree.leaf "e" ]
         findIn tree (Path []) (Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.leaf "d", Tree.leaf "e" ])
@@ -182,7 +181,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
         findIn tree (Path [3]) (Tree.leaf "e")
       it "`find` on a node with children 2" $ do
         let tree = Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [], Tree.leaf "e" ]
-        findIn tree (Path []) (Tree.leaf "a")
+        findIn tree (Path []) (Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [], Tree.leaf "e" ])
         findIn tree (Path [1]) (Tree.leaf "c")
         findIn tree (Path [2]) (Tree.node "d" [])
         findIn tree (Path [3]) (Tree.leaf "e")
@@ -194,8 +193,8 @@ main = launchAff_ $ runSpec [consoleReporter] do
         findIn tree (Path [3]) (Tree.leaf "e")
         findIn tree (Path [2, 1]) (Tree.leaf "r")
         findIn tree (Path [2, 2]) (Tree.leaf "s")
-        failToFind tree (Path [2, 1])
-        failToFind tree (Path [2, 2])
+        failToFind tree (Path [1, 1])
+        failToFind tree (Path [2, 7])
 
 
 

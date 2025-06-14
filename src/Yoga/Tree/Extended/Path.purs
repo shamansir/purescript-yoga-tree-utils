@@ -39,11 +39,15 @@ find (Path path) =
     then flip find' path
     else Just
     where
-        find' parent rempath =
+        find' focus rempath =
             Array.uncons rempath >>=
                 \{ head, tail } ->
-                    Array.index (YX.children parent) head
-                        >>= flip find' tail
+                    Array.index (YX.children focus) head >>=
+                        \child ->
+                            if (Array.length tail > 0) then
+                                find' child tail
+                            else
+                                Just child
 
 
 with :: forall a. Path -> (Tree a -> Tree a) -> Tree a -> Tree a
