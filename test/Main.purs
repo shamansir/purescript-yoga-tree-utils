@@ -23,46 +23,57 @@ import Yoga.Tree.Extended (Tree(..))
 import Yoga.Tree.Extended (node, leaf, set, update, children) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path as Path
-import Yoga.Tree.Extended.Path (with, traverse, find) as Tree
+import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up) as Path
 
 
 main :: Effect Unit
 main = launchAff_ $ runSpec [consoleReporter] do
   describe "purescript-yoga-tree-utils" $ do
 
+    describe "basics" $ do
+      it "root is empty path" $ do
+        Path.toArray Path.root `shouldEqual` []
+      it "advancing works" $ do
+        Path.toArray (Path.root # Path.advance 3 # Path.advance 3 # Path.advance 7)
+        `shouldEqual`
+        [ 3, 3, 7 ]
+      it "going up works" $ do
+        Path.toArray (Path.root # Path.advance 7 # Path.advance 4 # Path.advance 3 # Path.up)
+        `shouldEqual`
+        [ 7, 4 ]
+
     describe "`with`+`set`" $ do
 
-
       it "`with` : `set` on the root path" $
-        (Tree.with (Path []) (Tree.set 'b') $ Tree.leaf 'a')
+        (Path.with (Path []) (Tree.set 'b') $ Tree.leaf 'a')
         `compareTrees`
         (Tree.leaf 'b')
       it "`with` : `set` with one of the children" $
-        (Tree.with (Path [2]) (Tree.set 'x')
+        (Path.with (Path [2]) (Tree.set 'x')
           $ Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.leaf 'd', Tree.leaf 'e' ]
         )
         `compareTrees`
         (Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.leaf 'x', Tree.leaf 'e' ])
       it "`with` : `set` with the children that is an empty node" $
-        (Tree.with (Path [2]) (Tree.set 'x')
+        (Path.with (Path [2]) (Tree.set 'x')
           $ Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.node 'd' [], Tree.leaf 'e' ]
         )
         `compareTrees`
         (Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.node 'x' [], Tree.leaf 'e' ])
       it "`with` : `set` with the children that is a node with leafs" $
-        (Tree.with (Path [2]) (Tree.set 'x')
+        (Path.with (Path [2]) (Tree.set 'x')
           $ Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.node 'd' [ Tree.leaf '1', Tree.leaf '2', Tree.leaf '3' ], Tree.leaf 'e' ]
         )
         `compareTrees`
         (Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.node 'x' [ Tree.leaf '1', Tree.leaf '2', Tree.leaf '3' ], Tree.leaf 'e' ])
       it "`with` : `set` with the children on a deeper level" $
-        (Tree.with (Path [2, 0]) (Tree.set 'x')
+        (Path.with (Path [2, 0]) (Tree.set 'x')
           $ Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.node 'd' [ Tree.leaf '1', Tree.leaf '2', Tree.leaf '3' ], Tree.leaf 'e' ]
         )
         `compareTrees`
         (Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.node 'd' [ Tree.leaf 'x', Tree.leaf '2', Tree.leaf '3' ], Tree.leaf 'e' ])
       it "`with` : `set` when child doesn't exist" $
-        (Tree.with (Path [2, 7]) (Tree.set 'x')
+        (Path.with (Path [2, 7]) (Tree.set 'x')
           $ Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.node 'd' [ Tree.leaf '1', Tree.leaf '2', Tree.leaf '3' ], Tree.leaf 'e' ]
         )
         `compareTrees`
@@ -71,35 +82,35 @@ main = launchAff_ $ runSpec [consoleReporter] do
     describe "`with`+`update`" $ do
 
       it "`with` : `update` on the root path" $
-        (Tree.with (Path []) (Tree.update String.toUpper) $ Tree.leaf "a")
+        (Path.with (Path []) (Tree.update String.toUpper) $ Tree.leaf "a")
         `compareTrees`
         (Tree.leaf "A")
       it "`with` : `update` with one of the children" $
-        (Tree.with (Path [2]) (Tree.update String.toUpper)
+        (Path.with (Path [2]) (Tree.update String.toUpper)
           $ Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.leaf "d", Tree.leaf "e" ]
         )
         `compareTrees`
         (Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.leaf "D", Tree.leaf "e" ])
       it "`with` : `update` with the children that is an empty node" $ do
-        (Tree.with (Path [2]) (Tree.update String.toUpper)
+        (Path.with (Path [2]) (Tree.update String.toUpper)
           $ Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [], Tree.leaf "e" ]
         )
         `compareTrees`
         (Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "D" [], Tree.leaf "e" ])
       it "`with` : `update` with the children that is a node with leafs" $
-        (Tree.with (Path [2]) (Tree.update String.toUpper)
+        (Path.with (Path [2]) (Tree.update String.toUpper)
           $ Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [ Tree.leaf "q", Tree.leaf "r", Tree.leaf "s" ], Tree.leaf "e" ]
         )
         `compareTrees`
         (Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "D" [ Tree.leaf "q", Tree.leaf "r", Tree.leaf "s" ], Tree.leaf "e" ])
       it "`with` : `update` with the children on a deeper level" $
-        (Tree.with (Path [2, 0]) (Tree.update String.toUpper)
+        (Path.with (Path [2, 0]) (Tree.update String.toUpper)
           $ Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [ Tree.leaf "q", Tree.leaf "r", Tree.leaf "s" ], Tree.leaf "e" ]
         )
         `compareTrees`
         (Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [ Tree.leaf "Q", Tree.leaf "r", Tree.leaf "s" ], Tree.leaf "e" ])
       it "`with` : `update` when child doesn't exist" $
-        (Tree.with (Path [2, 7]) (Tree.update String.toUpper)
+        (Path.with (Path [2, 7]) (Tree.update String.toUpper)
           $ Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [ Tree.leaf "q", Tree.leaf "r", Tree.leaf "s" ], Tree.leaf "e" ]
         )
         `compareTrees`
@@ -110,11 +121,11 @@ main = launchAff_ $ runSpec [consoleReporter] do
       let collectData path value node = { path, value, children : Array.length $ Tree.children node }
 
       it "`traverse` on a one-leaf tree" $
-        (Tree.traverse collectData $ Tree.leaf "a")
+        (Path.traverse collectData $ Tree.leaf "a")
         `compareTrees`
         (Tree.leaf { path : Path [], value : "a", children : 0 })
       it "`traverse` on a node with children" $
-        (Tree.traverse collectData
+        (Path.traverse collectData
           $ Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.leaf "d", Tree.leaf "e" ]
         )
         `compareTrees`
@@ -126,7 +137,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
           ]
         )
       it "`traverse` on a node with children 2" $
-        (Tree.traverse collectData
+        (Path.traverse collectData
           $ Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [], Tree.leaf "e" ]
         )
         `compareTrees`
@@ -138,7 +149,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
           ]
         )
       it "`traverse` on a node with deeper children" $
-        (Tree.traverse collectData
+        (Path.traverse collectData
           $ Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [ Tree.leaf "q", Tree.leaf "r", Tree.leaf "s" ], Tree.leaf "e" ]
         )
         `compareTrees`
@@ -158,16 +169,16 @@ main = launchAff_ $ runSpec [consoleReporter] do
 
       let
 
-        findIn :: forall (m :: Type -> Type) a. MonadThrow Ex.Error m => Show a => Tree a -> Path -> Tree a -> m Unit
+        -- findIn :: forall (m :: Type -> Type) a. MonadThrow Ex.Error m => Show a => Tree a -> Path -> Tree a -> m Unit
         findIn tree path expected =
-          case Tree.find path tree of
+          case Path.find path tree of
             Just found ->
               found `compareTrees` expected
             Nothing -> fail $ showTree expected <> " wasn't found at " <> show path
 
-        failToFind :: forall (m :: Type -> Type) a. MonadThrow Ex.Error m => Show a => Tree a -> Path -> m Unit
+        -- failToFind :: forall (m :: Type -> Type) a. MonadThrow Ex.Error m => Show a => Tree a -> Path -> m Unit
         failToFind tree path =
-          case Tree.find path tree of
+          case Path.find path tree of
             Just what ->
               fail $ "expected to find nothing at " <> show path <> ", but found " <> showTree what
             Nothing -> pure unit

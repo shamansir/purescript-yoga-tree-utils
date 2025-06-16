@@ -3,7 +3,7 @@ module Yoga.Tree.Extended.Path where
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Data.Array (index, uncons, mapWithIndex, snoc, length, reverse) as Array
+import Data.Array (index, uncons, mapWithIndex, snoc, length, reverse, snoc, dropEnd) as Array
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.String (joinWith) as String
 
@@ -16,6 +16,18 @@ import Yoga.Tree.Extended (break, children, node, value) as YX
 
 
 newtype Path = Path (Array Int)
+
+
+root :: Path
+root = Path []
+
+
+advance :: Int -> Path -> Path
+advance n (Path path) = Path $ Array.snoc path n
+
+
+up :: Path -> Path
+up (Path path) = Path $ Array.dropEnd 1 path
 
 
 toArray :: Path -> Array Int
