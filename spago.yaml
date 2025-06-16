@@ -1,0 +1,23 @@
+package:
+  dependencies:
+  - arrays
+  - foldable-traversable
+  - free
+  - maybe
+  - prelude
+  - strings
+  - tuples
+  - yoga-tree
+  name: yoga-tree-utils
+  test:
+    main: Test.Main
+    dependencies:
+      - spec
+      - aff
+      - debug
+      - exceptions
+      - transformers
+workspace:
+  extraPackages: {}
+  packageSet:
+    url: https://raw.githubusercontent.com/purescript/package-sets/psc-0.15.9-20230718/packages.json
