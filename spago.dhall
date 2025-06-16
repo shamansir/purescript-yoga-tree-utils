@@ -13,8 +13,6 @@ to generate this file without the comments in this block.
 { name = "purescript-yoga-tree-utils"
 , dependencies =
   [ "arrays"
-  , "console"
-  , "effect"
   , "foldable-traversable"
   , "free"
   , "maybe"
@@ -24,5 +22,5 @@ to generate this file without the comments in this block.
   , "yoga-tree"
   ]
 , packages = ./packages.dhall
-, sources = [ "src/**/*.purs", "test/**/*.purs" ]
+, sources = [ "src/**/*.purs" ]
 }

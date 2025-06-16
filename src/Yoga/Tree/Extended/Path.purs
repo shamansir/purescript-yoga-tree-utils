@@ -7,8 +7,6 @@ import Data.Array (index, uncons, mapWithIndex, snoc, length, reverse) as Array
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.String (joinWith) as String
 
-
-import Debug as Debug
 -- TODO: duplicates `Zipper.Loc` / depth first ?
 -- TODO: if not, use `Zipper.Loc` with `Path`
 
