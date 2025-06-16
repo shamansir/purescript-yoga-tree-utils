@@ -18,6 +18,10 @@ import Yoga.Tree.Extended (break, children, node, value) as YX
 newtype Path = Path (Array Int)
 
 
+derive instance Eq Path
+derive instance Ord Path
+
+
 root :: Path
 root = Path []
 
@@ -94,6 +98,10 @@ traverse f =
                             (traverse' <<< Array.snoc path)
                 )
                 node
+
+
+-- foldTraverse :: forall a b. (Path -> a -> Tree a -> b) -> Tree a -> b
+-- foldTraverse = fill >>> foldl
 
 
 instance Show Path where

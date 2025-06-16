@@ -13,6 +13,9 @@ import Yoga.Tree (Tree, leaf, mkTree, setNodeValue, modifyNodeValue) as Y
 type Tree n = Y.Tree n
 
 
+infixr 5 node as :<
+
+
 leaf :: forall n. n -> Tree n
 leaf = Y.leaf
 
