@@ -1,19 +1,17 @@
 module Yoga.Tree.Extended where
 
-import Prelude (($), (<<<), map)
+import Prelude (($), (<<<), map, (<$>))
 
 import Control.Comonad.Cofree (head, tail) as Y
 import Data.Maybe (Maybe, fromMaybe)
-import Data.Array (catMaybes) as Array
+import Data.Array ((:))
+import Data.Array (catMaybes, concat) as Array
 import Data.Traversable (sequence)
 
 import Yoga.Tree (Tree, leaf, mkTree, setNodeValue, modifyNodeValue) as Y
 
 
 type Tree n = Y.Tree n
-
-
-infixr 5 node as :<
 
 
 leaf :: forall n. n -> Tree n
@@ -30,6 +28,10 @@ value = Y.head
 
 children :: forall n. Tree n -> Array (Tree n)
 children = Y.tail
+
+
+flatten :: forall a. Tree a -> Array a
+flatten = break $ \v xs -> v : Array.concat (flatten <$> xs)
 
 
 break :: forall n a. (n -> Array (Tree n) -> a) -> Tree n -> a

@@ -4,6 +4,8 @@ import Prelude
 
 import Data.Maybe (Maybe(..))
 import Data.Array (index, uncons, mapWithIndex, snoc, length, reverse, snoc, dropEnd) as Array
+import Data.Tuple (fst, snd) as Tuple
+import Data.Bifunctor (lmap)
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.String (joinWith) as String
 
@@ -36,6 +38,10 @@ up (Path path) = Path $ Array.dropEnd 1 path
 
 toArray :: Path -> Array Int
 toArray (Path array) = array
+
+
+depth :: Path -> Int
+depth (Path arr) = Array.length arr
 
 
 fill :: forall a. Tree a -> Tree (Path /\ a)
@@ -98,6 +104,10 @@ traverse f =
                             (traverse' <<< Array.snoc path)
                 )
                 node
+
+
+fillDepths :: forall a. Tree a -> Tree (Int /\ a)
+fillDepths = fill >>> map (lmap depth)
 
 
 -- foldTraverse :: forall a b. (Path -> a -> Tree a -> b) -> Tree a -> b

@@ -20,7 +20,7 @@ import Test.Spec.Runner (runSpec)
 
 import Yoga.Tree (showTree)
 import Yoga.Tree.Extended (Tree(..))
-import Yoga.Tree.Extended (node, leaf, set, update, children) as Tree
+import Yoga.Tree.Extended (node, leaf, set, update, children, flatten) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path as Path
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up) as Path
@@ -41,6 +41,10 @@ main = launchAff_ $ runSpec [consoleReporter] do
         Path.toArray (Path.root # Path.advance 7 # Path.advance 4 # Path.advance 3 # Path.up)
         `shouldEqual`
         [ 7, 4 ]
+      it "flatten works" $ do
+        (Tree.flatten $ Tree.node 'a' $ [ Tree.leaf 'b', Tree.leaf 'c', Tree.node 'd' [ Tree.leaf '1', Tree.leaf '2', Tree.leaf '3' ], Tree.leaf 'e' ])
+        `shouldEqual`
+        [ 'a', 'b', 'c', 'd', '1', '2', '3', 'e' ]
 
     describe "`with`+`set`" $ do
 
