@@ -2,7 +2,8 @@ module Yoga.Tree.Extended where
 
 import Prelude
 
-import Control.Comonad.Cofree (head, tail) as Y
+import Control.Comonad.Cofree (head, tail, mkCofree) as Y
+import Control.Comonad.Cofree
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Array ((:))
 import Data.Array (head, catMaybes, concat, drop, reverse) as Array
@@ -33,6 +34,14 @@ value = Y.head
 {-| Get children of the this tree node. |-}
 children :: forall n. Tree n -> Array (Tree n)
 children = Y.tail
+
+
+infixr 5 lnodeOp as :<~
+
+
+{-| Node that only has leaves |-}
+lnodeOp :: forall n. n -> Array n -> Tree n
+lnodeOp n ls = Y.mkCofree n $ leaf <$> ls
 
 
 {-| Convert tree to a flat array structure:
