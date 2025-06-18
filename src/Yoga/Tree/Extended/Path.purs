@@ -17,6 +17,7 @@ import Yoga.Tree (Tree)
 import Yoga.Tree.Extended (break, children, node, value) as YX
 
 
+{-| Path is an array of positions of nodes required to be visited to reach some node. |-}
 newtype Path = Path (Array Int)
 
 
@@ -24,26 +25,32 @@ derive instance Eq Path
 derive instance Ord Path
 
 
+{-| Root path. |-}
 root :: Path
 root = Path []
 
 
+{-| Go deeper one level at the point with given index. |-}
 advance :: Int -> Path -> Path
 advance n (Path path) = Path $ Array.snoc path n
 
 
+{-| Go up one level. |-}
 up :: Path -> Path
 up (Path path) = Path $ Array.dropEnd 1 path
 
 
+{-| Convert path to an array. |-}
 toArray :: Path -> Array Int
 toArray (Path array) = array
 
 
+{-| How deep is this path in the tree. |-}
 depth :: Path -> Int
 depth (Path arr) = Array.length arr
 
 
+{-| Fill every value in this tree with its full path. |-}
 fill :: forall a. Tree a -> Tree (Path /\ a)
 fill = YX.break \a -> YX.node (Path [] /\ a) <<< Array.mapWithIndex (fill' [])
     where
@@ -53,6 +60,7 @@ fill = YX.break \a -> YX.node (Path [] /\ a) <<< Array.mapWithIndex (fill' [])
     -- TODO: same as `traverse \path _ _ -> path`
 
 
+{-| Find a deeper tree node by its given path. |-}
 find :: forall a. Path -> Tree a -> Maybe (Tree a)
 find (Path path) =
     if (Array.length path > 0)
@@ -70,6 +78,7 @@ find (Path path) =
                                 Just child
 
 
+{-| Call a function with the tree node at the given path. |-}
 with :: forall a. Path -> (Tree a -> Tree a) -> Tree a -> Tree a
 with (Path path) f =
     if (Array.length path > 0)
@@ -92,6 +101,7 @@ with (Path path) f =
                 Nothing -> node
 
 
+{-| Walk around the complete tree, calling a function at every node with its path, value and children. |-}
 traverse :: forall a b. (Path -> a -> Tree a -> b) -> Tree a -> Tree b
 traverse f =
     traverse' []
@@ -106,6 +116,7 @@ traverse f =
                 node
 
 
+{-| Pair every value in the tree with how deep it is in this tree. |-}
 fillDepths :: forall a. Tree a -> Tree (Int /\ a)
 fillDepths = fill >>> map (lmap depth)
 

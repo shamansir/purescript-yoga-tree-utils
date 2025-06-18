@@ -5,6 +5,7 @@ import Prelude
 import Data.String (toUpper) as String
 import Data.Array (length) as Array
 import Data.Maybe (Maybe(..))
+import Data.Tuple.Nested ((/\), type (/\))
 
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -19,11 +20,10 @@ import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpec)
 
 import Yoga.Tree (showTree)
-import Yoga.Tree.Extended (Tree(..))
-import Yoga.Tree.Extended (node, leaf, set, update, children, flatten) as Tree
+import Yoga.Tree.Extended (Tree)
+import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
-import Yoga.Tree.Extended.Path as Path
-import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up) as Path
+import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray) as Path
 
 
 main :: Effect Unit
@@ -211,6 +211,11 @@ main = launchAff_ $ runSpec [consoleReporter] do
         failToFind tree (Path [1, 1])
         failToFind tree (Path [2, 7])
 
+    describe "`edges`" $ do
+
+        it "`edges` of the tree node" $ do
+          let tree = Tree.node "a" $ [ Tree.leaf "b", Tree.leaf "c", Tree.node "d" [ Tree.leaf "q", Tree.leaf "r", Tree.leaf "s" ], Tree.leaf "e" ]
+          Tree.edges tree `shouldEqual` [ "a" /\ "b", "a" /\ "c", "a" /\ "d", "a" /\ "e", "d" /\ "q", "d" /\ "r", "d" /\ "s" ]
 
 
 compareTrees ∷ forall (m :: Type -> Type) (a ∷ Type) (b ∷ Type). MonadThrow Ex.Error m => Show a => Show b => Tree a -> Tree b -> m Unit
