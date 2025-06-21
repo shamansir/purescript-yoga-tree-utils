@@ -1,13 +1,14 @@
 package:
   dependencies:
-  - arrays
-  - foldable-traversable
-  - free
-  - maybe
-  - prelude
-  - strings
-  - tuples
-  - yoga-tree
+    - arrays
+    - foldable-traversable
+    - free
+    - graphs
+    - maybe
+    - prelude
+    - strings
+    - tuples
+    - yoga-tree
   name: yoga-tree-utils
   test:
     main: Test.Main

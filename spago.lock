@@ -8,6 +8,7 @@
             "arrays",
             "foldable-traversable",
             "free",
+            "graphs",
             "maybe",
             "prelude",
             "strings",
@@ -32,6 +33,7 @@
             "functions",
             "functors",
             "gen",
+            "graphs",
             "identity",
             "integers",
             "invariant",
@@ -41,6 +43,7 @@
             "newtype",
             "nonempty",
             "numbers",
+            "ordered-collections",
             "orders",
             "partial",
             "prelude",
@@ -7477,6 +7480,15 @@
         "tailrec",
         "tuples",
         "unfoldable"
+      ]
+    },
+    "graphs": {
+      "type": "git",
+      "url": "https://github.com/purescript/purescript-graphs.git",
+      "rev": "92c7a2452fc7b15a0a0b69c9e3a983ca729cecab",
+      "dependencies": [
+        "catenable-lists",
+        "ordered-collections"
       ]
     },
     "identity": {
