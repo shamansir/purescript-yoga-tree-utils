@@ -266,7 +266,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
         Path.advanceDir Path.root Path.Right tree `shouldEqual`(Path.root) -- only root is next to the root
 
       it "properly navigates in the tree: left" $ do
-        Path.advanceDir (Path [ 2, 0 ]) Path.Left tree `shouldEqual` (Path [ 2, 1 ]) -- already at `q`, the begiining, no way to the left
+        Path.advanceDir (Path [ 2, 0 ]) Path.Left tree `shouldEqual` (Path [ 2, 0 ]) -- already at `q`, the begiining, no way to the left
         Path.advanceDir (Path [ 2, 2 ]) Path.Left tree `shouldEqual` (Path [ 2, 1 ]) -- go from `s` to `r`
         Path.advanceDir (Path [ 1 ]) Path.Left tree `shouldEqual` (Path [ 0 ]) -- previous for `c` is `b`
         Path.advanceDir Path.root Path.Left tree `shouldEqual`(Path.root) -- only root is next to the root

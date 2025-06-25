@@ -3,11 +3,12 @@ module Yoga.Tree.Extended.Path where
 import Prelude
 
 import Data.Maybe (Maybe(..))
-import Data.Array (index, uncons, mapWithIndex, snoc, length, reverse, snoc, dropEnd) as Array
+import Data.Array (index, uncons, mapWithIndex, snoc, length, reverse, snoc, dropEnd, last) as Array
 import Data.Tuple (fst, snd) as Tuple
 import Data.Bifunctor (lmap)
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.String (joinWith) as String
+import Data.FoldableWithIndex (foldlWithIndex)
 
 -- TODO: duplicates `Zipper.Loc` / depth first ?
 -- TODO: if not, use `Zipper.Loc` with `Path`
@@ -134,18 +135,45 @@ instance Show Path where
 
 {-| If first path contains full second path. They could be equal, but the second path couldn't be longer than the first one. Every path contains `root`. |-}
 startsWith :: Path -> Path -> Boolean
-startsWith _ _ = false
+startsWith first second =
+    (depth second <= depth first) &&
+    ( let
+        firstArr = toArray first
+        secondArr = toArray second
+    in
+        foldlWithIndex
+            (\idx prev val -> prev && (Array.index firstArr idx == Just val))
+            true
+            secondArr
+    )
+
+
+{-| Value at given depth. |-}
+posAt :: Path -> Int -> Maybe Int
+posAt (Path pathArr) = Array.index pathArr
+
+
+{-| Value at the last position. |-}
+lastPos :: Path -> Maybe Int
+lastPos path = posAt path $ depth path - 1
 
 
 {-| If first path contains full second path, and the first path is exactly one level deeper than the second.
 So if you would navigate at second path down (deeper), at the same index as the last position of the first path, then they would become equal. |-}
 isNextFor :: Path -> Path -> Boolean
-isNextFor _ _ = false
+isNextFor first second =
+    (depth first == depth second + 1) && startsWith first second
 
 
 {-| Navigate deeper by given index but only if the index is in the bounds of how many children are accessibly by this path. |-}
 safeAdvance :: forall a. Path -> Int -> Tree a -> Path
-safeAdvance path n tree = path
+safeAdvance path n tree =
+  case find path tree of
+    Just subTree ->
+        if n < (Array.length $ YX.children subTree) && n >= 0
+            then path # advance n
+            else path
+    Nothing -> path
 
 
 data Dir
@@ -153,6 +181,33 @@ data Dir
     | Down -- one level deeper
     | Right -- next child
     | Left -- previous child
+
+
+{-| If the tree contains element at given path. |-}
+existsAt :: forall a. Path -> Tree a -> Boolean
+existsAt path tree =
+    case find path tree of
+        Just _ -> true
+        Nothing -> false
+
+{-| Safely go one level up to the root. |-}
+safeUp :: forall a. Path -> Tree a -> Path
+safeUp path = advanceDir path Up
+
+
+{-| Safely go one level deeper, when possible. |-}
+safeDown :: forall a. Path -> Tree a -> Path
+safeDown path = advanceDir path Down
+
+
+{-| Safely go to the next neigbouring child from the same parent. |-}
+safeRight :: forall a. Path -> Tree a -> Path
+safeRight path = advanceDir path Right
+
+
+{-| Safely go to the previous neigbouring child from the same parent. |-}
+safeLeft :: forall a. Path -> Tree a -> Path
+safeLeft path = advanceDir path Left
 
 
 {-| Safely (by checking bounds from this tree) advance this path one step in the requested direction:
@@ -163,4 +218,43 @@ data Dir
     * `Left` : to the previous neigbouring child from the same parent
 |-}
 advanceDir :: forall a. Path -> Dir -> Tree a -> Path
-advanceDir path dir tree = path
+advanceDir path@(Path pathArr) Up tree =
+    if (Array.length pathArr > 0)
+        then
+            if existsAt path tree
+                then Path $ Array.dropEnd 1 pathArr
+                else path
+        else path
+advanceDir path Down tree =
+    safeAdvance path 0 tree
+advanceDir path@(Path pathArr) Right tree =
+    let
+        parentPath = Path $ Array.dropEnd 1 pathArr
+        mbLastPos = Array.last pathArr
+    in
+        case find parentPath tree of
+            Just parentTree ->
+                case mbLastPos of
+                    Just lastPos ->
+                        if (Array.length $ YX.children parentTree) > 0
+                        && (lastPos + 1 < (Array.length $ YX.children parentTree))
+                            then parentPath # advance (lastPos + 1)
+                            else path
+                    Nothing -> path
+            Nothing -> path
+advanceDir path@(Path pathArr) Left tree =
+    let
+        parentPath = Path $ Array.dropEnd 1 pathArr
+        mbLastPos = Array.last pathArr
+    in
+        case find parentPath tree of
+            Just parentTree ->
+                case mbLastPos of
+                    Just lastPos ->
+                        if (Array.length $ YX.children parentTree) > 0
+                        && (lastPos - 1 >= 0)
+                        && (lastPos - 1 < (Array.length $ YX.children parentTree))
+                            then parentPath # advance (lastPos - 1)
+                            else path
+                    Nothing -> path
+            Nothing -> path
