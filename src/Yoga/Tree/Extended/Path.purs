@@ -129,4 +129,38 @@ instance Show Path where
     show (Path path) =
         case path of
             [] -> "*" -- "<root>"
-            indices -> String.joinWith ":" $ show <$> indices
+            indices -> String.joinWith " : " $ show <$> indices
+
+
+{-| If first path contains full second path. They could be equal, but the second path couldn't be longer than the first one. Every path contains `root`. |-}
+startsWith :: Path -> Path -> Boolean
+startsWith _ _ = false
+
+
+{-| If first path contains full second path, and the first path is exactly one level deeper than the second.
+So if you would navigate at second path down (deeper), at the same index as the last position of the first path, then they would become equal. |-}
+isNextFor :: Path -> Path -> Boolean
+isNextFor _ _ = false
+
+
+{-| Navigate deeper by given index but only if the index is in the bounds of how many children are accessibly by this path. |-}
+safeAdvance :: forall a. Path -> Int -> Tree a -> Path
+safeAdvance path n tree = path
+
+
+data Dir
+    = Up -- one level up
+    | Down -- one level deeper
+    | Right -- next child
+    | Left -- previous child
+
+
+{-| Safely (by checking bounds from this tree) advance this path one step in the requested direction:
+
+    * `Up`: one level up to the root
+    * `Down`: one level deeper, when possible
+    * `Right`: to the next neigbouring child from the same parent
+    * `Left` : to the previous neigbouring child from the same parent
+|-}
+advanceDir :: forall a. Path -> Dir -> Tree a -> Path
+advanceDir path dir tree = path

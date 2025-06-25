@@ -24,7 +24,7 @@ import Yoga.Tree (showTree)
 import Yoga.Tree.Extended (Tree, (:<~))
 import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
-import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray) as Path
+import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, Dir(..)) as Path
 
 
 ql = Tree.leaf
@@ -217,9 +217,59 @@ main = launchAff_ $ runSpec [consoleReporter] do
 
     describe "`edges`" $ do
 
-        it "`edges` of the tree node" $ do
-          let tree = "a" :< [ ql "b", ql "c", "d" :<~ [ "q", "r", "s" ], ql "e" ]
-          Tree.edges tree `shouldEqual` [ "a" /\ "b", "a" /\ "c", "a" /\ "d", "a" /\ "e", "d" /\ "q", "d" /\ "r", "d" /\ "s" ]
+      it "`edges` of the tree node" $ do
+        let tree = "a" :< [ ql "b", ql "c", "d" :<~ [ "q", "r", "s" ], ql "e" ]
+        Tree.edges tree `shouldEqual` [ "a" /\ "b", "a" /\ "c", "a" /\ "d", "a" /\ "e", "d" /\ "q", "d" /\ "r", "d" /\ "s" ]
+
+    describe "path" $ do
+
+      let tree = "a" :< [ ql "b", ql "c", "d" :<~ [ "q", "r", "s" ], ql "e" ]
+
+      it "properly detects `startsWith`" $ do
+        Path.startsWith (Path [ 1 ]) Path.root `shouldEqual` true
+        Path.startsWith Path.root (Path [ 1 ]) `shouldEqual` false
+        Path.startsWith (Path [ 1, 2, 3 ]) (Path [ 1 ]) `shouldEqual` true
+        Path.startsWith (Path [ 3, 2, 1 ]) (Path [ 1 ]) `shouldEqual` false
+        Path.startsWith (Path [ 2, 2, 2 ]) (Path [ 2 ]) `shouldEqual` true
+        Path.startsWith (Path [ 2, 2, 2 ]) (Path [ 2, 2 ]) `shouldEqual` true
+
+      it "properly detects `nextFor`" $ do
+        Path.isNextFor (Path [ 1 ]) Path.root `shouldEqual` true
+        Path.isNextFor (Path [ 1, 2 ]) Path.root `shouldEqual` false
+        Path.isNextFor Path.root (Path [ 1 ]) `shouldEqual` false
+        Path.isNextFor (Path [ 1, 2, 3 ]) (Path [ 1, 2 ]) `shouldEqual` true
+
+      it "`safeAdvance`" $ do
+        Path.safeAdvance (Path [ ]) 0 tree `shouldEqual` (Path [ 0 ]) -- first child exists, go to `b`
+        Path.safeAdvance (Path [ ]) 3 tree `shouldEqual` (Path [ 3 ]) -- fourth (index 3) child exists, go to `e`
+        Path.safeAdvance (Path [ ]) 4 tree `shouldEqual` (Path [ ])  -- no fifth child, stay at `a`
+        Path.safeAdvance (Path [ ]) (-1) tree `shouldEqual` (Path [ ]) -- couldn't go in negative direction, stay at `a`
+        Path.safeAdvance (Path [ 0 ]) 0 tree `shouldEqual` (Path [ 0 ]) -- first child exists
+        Path.safeAdvance (Path [ 0, 0 ]) 0 tree `shouldEqual` (Path [ 0, 0 ]) -- no children deeper, stays at `b`
+        Path.safeAdvance (Path [ 2 ]) 1 tree `shouldEqual` (Path [ 2, 1 ]) -- at `r`
+        Path.safeAdvance (Path [ 2 ]) 3 tree `shouldEqual` (Path [ 2 ]) -- not enough children: [ "q", "r", "s" ]
+
+      it "properly navigates in the tree: up" $ do
+        Path.advanceDir Path.root Path.Up tree `shouldEqual` Path.root -- no way up above the root
+        Path.advanceDir (Path [ 1 ]) Path.Up tree `shouldEqual` Path.root -- from one level deep to the root
+        Path.advanceDir (Path [ 2, 1 ]) Path.Up tree `shouldEqual` (Path [ 2 ]) -- one level up
+
+      it "properly navigates in the tree: down" $ do
+        Path.advanceDir Path.root Path.Down tree `shouldEqual` (Path [ 0 ]) -- to the first child
+        Path.advanceDir (Path [ 1 ]) Path.Down tree `shouldEqual` (Path [ 1 ]) -- nothing is deeper, stays at `c`
+        Path.advanceDir (Path [ 2 ]) Path.Down tree `shouldEqual` (Path [ 2, 0 ]) -- one level down to `q`
+
+      it "properly navigates in the tree: right" $ do
+        Path.advanceDir (Path [ 2, 0 ]) Path.Right tree `shouldEqual` (Path [ 2, 1 ]) -- next child after `q` is `r`
+        Path.advanceDir (Path [ 2, 2 ]) Path.Right tree `shouldEqual` (Path [ 2, 2 ]) -- no child next to `s`, stays the same
+        Path.advanceDir (Path [ 1 ]) Path.Right tree `shouldEqual` (Path [ 2 ]) -- next to `c` is `d`
+        Path.advanceDir Path.root Path.Right tree `shouldEqual`(Path.root) -- only root is next to the root
+
+      it "properly navigates in the tree: left" $ do
+        Path.advanceDir (Path [ 2, 0 ]) Path.Left tree `shouldEqual` (Path [ 2, 1 ]) -- already at `q`, the begiining, no way to the left
+        Path.advanceDir (Path [ 2, 2 ]) Path.Left tree `shouldEqual` (Path [ 2, 1 ]) -- go from `s` to `r`
+        Path.advanceDir (Path [ 1 ]) Path.Left tree `shouldEqual` (Path [ 0 ]) -- previous for `c` is `b`
+        Path.advanceDir Path.root Path.Left tree `shouldEqual`(Path.root) -- only root is next to the root
 
 
 compareTrees ∷ forall (m :: Type -> Type) (a ∷ Type) (b ∷ Type). MonadThrow Ex.Error m => Show a => Show b => Tree a -> Tree b -> m Unit
