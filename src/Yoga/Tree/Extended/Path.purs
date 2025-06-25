@@ -1,4 +1,18 @@
-module Yoga.Tree.Extended.Path where
+module Yoga.Tree.Extended.Path
+    -- ( Path
+    -- , Dir(..)
+    -- , root
+    -- , toArray, fromArray
+    -- , depth
+    -- , fill, fillDepths
+    -- , find
+    -- , with, traverse
+    -- , startsWith, isNextFor
+    -- , existsAt, posAt, lastPos
+    -- , advance, up, advanceDir
+    -- , safeAdvance, safeUp, safeDown, safeRight, safeLeft
+    -- ) where
+    where
 
 import Prelude
 
@@ -22,8 +36,25 @@ import Yoga.Tree.Extended (break, children, node, value) as YX
 newtype Path = Path (Array Int)
 
 
+instance Show Path where
+    show (Path path) =
+        case path of
+            [] -> "*" -- "<root>"
+            indices -> String.joinWith " :: " $ show <$> indices
+
+
 derive instance Eq Path
 derive instance Ord Path
+
+
+{- Second path gets a new meaning, so it is better not to allow this
+
+instance Monoid Path where
+    mempty = root
+
+instance Semigroup Path where
+    append (Path pathA) (Path pathB) = Path $ pathA <> pathB
+-}
 
 
 {-| Root path. |-}
@@ -44,6 +75,11 @@ up (Path path) = Path $ Array.dropEnd 1 path
 {-| Convert path to an array. |-}
 toArray :: Path -> Array Int
 toArray (Path array) = array
+
+
+{-| Create path from array. |-}
+fromArray :: Array Int -> Path
+fromArray = Path
 
 
 {-| How deep is this path in the tree. |-}
@@ -126,13 +162,6 @@ fillDepths = fill >>> map (lmap depth)
 -- foldTraverse = fill >>> foldl
 
 
-instance Show Path where
-    show (Path path) =
-        case path of
-            [] -> "*" -- "<root>"
-            indices -> String.joinWith " : " $ show <$> indices
-
-
 {-| If first path contains full second path. They could be equal, but the second path couldn't be longer than the first one. Every path contains `root`. |-}
 startsWith :: Path -> Path -> Boolean
 startsWith first second =
@@ -183,7 +212,10 @@ data Dir
     | Left -- previous child
 
 
-{-| If the tree contains element at given path. |-}
+derive instance Eq Dir
+
+
+{-| If the tree contains something at given path. |-}
 existsAt :: forall a. Path -> Tree a -> Boolean
 existsAt path tree =
     case find path tree of
@@ -235,10 +267,10 @@ advanceDir path@(Path pathArr) Right tree =
         case find parentPath tree of
             Just parentTree ->
                 case mbLastPos of
-                    Just lastPos ->
+                    Just theLastPos ->
                         if (Array.length $ YX.children parentTree) > 0
-                        && (lastPos + 1 < (Array.length $ YX.children parentTree))
-                            then parentPath # advance (lastPos + 1)
+                        && (theLastPos + 1 < (Array.length $ YX.children parentTree))
+                            then parentPath # advance (theLastPos + 1)
                             else path
                     Nothing -> path
             Nothing -> path
@@ -250,11 +282,11 @@ advanceDir path@(Path pathArr) Left tree =
         case find parentPath tree of
             Just parentTree ->
                 case mbLastPos of
-                    Just lastPos ->
+                    Just theLastPos ->
                         if (Array.length $ YX.children parentTree) > 0
-                        && (lastPos - 1 >= 0)
-                        && (lastPos - 1 < (Array.length $ YX.children parentTree))
-                            then parentPath # advance (lastPos - 1)
+                        && (theLastPos - 1 >= 0)
+                        && (theLastPos - 1 < (Array.length $ YX.children parentTree))
+                            then parentPath # advance (theLastPos - 1)
                             else path
                     Nothing -> path
             Nothing -> path
