@@ -8,6 +8,7 @@ package:
     - prelude
     - strings
     - tuples
+    - unicode
     - yoga-tree
   name: yoga-tree-utils
   test:

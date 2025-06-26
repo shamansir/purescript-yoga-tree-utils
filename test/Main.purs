@@ -6,6 +6,7 @@ import Data.String (toUpper) as String
 import Data.Array (length) as Array
 import Data.Maybe (Maybe(..))
 import Data.Tuple.Nested ((/\), type (/\))
+import Data.Int (fromString) as Int
 
 import Effect (Effect)
 import Effect.Aff (launchAff_)
@@ -21,10 +22,12 @@ import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpec)
 
 import Yoga.Tree (showTree)
+import Yoga.Tree (appendChild) as Tree
 import Yoga.Tree.Extended (Tree, (:<~))
 import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, Dir(..)) as Path
+import Yoga.Tree.Extended.Convert as Convert
 
 
 ql = Tree.leaf
@@ -123,6 +126,41 @@ main = launchAff_ $ runSpec [consoleReporter] do
         )
         `compareTrees`
         ("a" :< [ ql "b", ql "c", "d" :<~ [ "q", "r", "s" ], ql "e" ])
+
+
+    describe "`with`+`appendChild`" $ do
+
+      it "`with`: properly appends child at root" $
+        (Path.with (Path []) (Tree.appendChild $ ql "b") $ ql "a")
+        `compareTrees`
+        ("a" :<~ [ "b" ])
+
+      it "`with`: properly appends child at root that already has children" $
+        (Path.with (Path []) (Tree.appendChild $ ql "c") $ "a" :<~ [ "b" ])
+        `compareTrees`
+        ("a" :<~ [ "b", "c" ])
+
+      it "`with`: properly appends child at some node" $
+        (Path.with (Path [ 0 ]) (Tree.appendChild $ ql "c") $ "a" :<~ [ "b" ])
+        `compareTrees`
+        ("a" :< [ "b" :<~ [ "c" ] ])
+
+      it "`with`: properly appends child at the node that already has children" $
+        (Path.with (Path [ 0 ]) (Tree.appendChild $ ql "d") $ "a" :< [ "b" :<~ [ "c" ] ])
+        `compareTrees`
+        ("a" :< [ "b":<~ [ "c", "d" ] ])
+
+      it "`with`: properly appends child at some deeper node" $
+        (Path.with (Path [ 2, 1 ]) (Tree.appendChild $ ql "h")
+          $ "a" :< [ ql "b", ql "c", "d" :<~ [ "e", "f", "g" ], ql "x", ql "y" ])
+        `compareTrees`
+        ("a" :< [ ql "b", ql "c", "d" :< [ ql "e", "f" :<~ [ "h" ], ql "g" ], ql "x", ql "y" ])
+
+      it "`with`: properly appends child at the deeper node that already has children" $
+        (Path.with (Path [ 2, 1 ]) (Tree.appendChild $ ql "i")
+          $ "a" :< [ ql "b", ql "c", "d" :< [ ql "e", "f" :<~ [ "h" ], ql "g" ], ql "x", ql "y" ])
+        `compareTrees`
+        ("a" :< [ ql "b", ql "c", "d" :< [ ql "e", "f" :<~ [ "h", "i" ], ql "g" ], ql "x", ql "y" ])
 
     describe "`traverse`" $ do
 
@@ -270,6 +308,85 @@ main = launchAff_ $ runSpec [consoleReporter] do
         Path.advanceDir (Path [ 2, 2 ]) Path.Left tree `shouldEqual` (Path [ 2, 1 ]) -- go from `s` to `r`
         Path.advanceDir (Path [ 1 ]) Path.Left tree `shouldEqual` (Path [ 0 ]) -- previous for `c` is `b`
         Path.advanceDir Path.root Path.Left tree `shouldEqual`(Path.root) -- only root is next to the root
+
+    describe "conversions" $ do
+
+      it "`fromString`: just root" $ do
+
+        (Convert.fromString Int.fromString """1""" `compareTrees` (Tree.leaf $ Just 1))
+
+      it "`fromString`: one-level nesting" $ do
+        (Convert.fromString Int.fromString """1
+ 11
+ 12
+ 13"""
+        `compareTrees`
+        (Just <$> 1 :<~ [ 11, 12, 13 ]))
+
+      it "`fromString`: deeper nesting" $ do
+        (Convert.fromString Int.fromString """1
+ 11
+ 12
+  121
+  122
+  123"""
+        `compareTrees`
+        (Just <$> 1 :< [ ql 11, 12 :<~ [ 121, 122, 123 ] ]))
+
+      it "`fromString`: deeper nesting 2" $ do
+        (Convert.fromString Int.fromString """1
+ 11
+ 12
+  121
+  122
+  123
+ 13"""
+        `compareTrees`
+        (Just <$> 1 :< [ ql 11, 12 :<~ [ 121, 122, 123 ], ql 13 ]))
+
+
+      it "`fromString`: deeper nesting with next children" $ do
+        (Convert.fromString Int.fromString """1
+ 11
+ 12
+  121
+  122
+  123
+ 13
+  131
+ 14
+ 15"""
+        `compareTrees`
+        (Just <$> 1 :< [ ql 11, 12 :<~ [ 121, 122, 123 ], 13 :<~ [ 131 ], ql 14, ql 15 ]))
+
+      it "`fromString`: deeper nesting with next children 2" $ do
+        (Convert.fromString Int.fromString """1
+ 11
+ 12
+  121
+  122
+  123
+ 13
+  131
+ 14
+  141
+  142
+   1421
+ 15
+  151
+  152
+ 16"""
+        `compareTrees`
+        (Just <$>
+          1 :<
+            [ ql 11
+            , 12 :<~ [ 121, 122, 123 ]
+            , 13 :<~ [ 131 ]
+            , 14 :< [ ql 141, 142 :<~ [ 1421 ] ]
+            , 15 :<~ [ 151, 152 ]
+            , ql 16
+            ])
+        )
 
 
 compareTrees ∷ forall (m :: Type -> Type) (a ∷ Type) (b ∷ Type). MonadThrow Ex.Error m => Show a => Show b => Tree a -> Tree b -> m Unit

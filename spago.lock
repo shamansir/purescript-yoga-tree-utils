@@ -13,6 +13,7 @@
             "prelude",
             "strings",
             "tuples",
+            "unicode",
             "yoga-tree"
           ],
           "build_plan": [
@@ -57,6 +58,7 @@
             "tuples",
             "type-equality",
             "unfoldable",
+            "unicode",
             "unsafe-coerce",
             "yoga-tree"
           ]
@@ -8019,6 +8021,16 @@
         "partial",
         "prelude",
         "tuples"
+      ]
+    },
+    "unicode": {
+      "type": "git",
+      "url": "https://github.com/purescript-contrib/purescript-unicode.git",
+      "rev": "6454d59d9e1fd1bc5a72e80e985d8282022a567a",
+      "dependencies": [
+        "foldable-traversable",
+        "maybe",
+        "strings"
       ]
     },
     "unsafe-coerce": {
