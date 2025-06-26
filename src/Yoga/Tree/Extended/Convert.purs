@@ -111,7 +111,7 @@ type PreParseStep    = { index :: Int, level :: Int, str :: String }
 type TreeParseStep a = { path :: Path, prevLevel :: Int, tree :: Tree (Maybe a) }
 
 
-fromString :: forall a. Show a => (String -> Maybe a) -> String -> Tree (Maybe a)
+fromString :: forall a. (String -> Maybe a) -> String -> Tree (Maybe a)
 fromString extract src =
     String.split (Pattern "\n") src
         <#> extractLevel
