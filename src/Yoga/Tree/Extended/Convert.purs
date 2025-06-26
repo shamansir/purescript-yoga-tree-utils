@@ -1,8 +1,11 @@
 module Yoga.Tree.Extended.Convert where
 
 import Prelude
+import Foreign (F, Foreign, ForeignError)
 
 import Data.Newtype (class Newtype, wrap, unwrap)
+import Data.Either (Either(..))
+import Data.List.NonEmpty (NonEmptyList)
 
 import Control.Comonad.Cofree (Cofree, head, mkCofree, tail, (:<))
 import Control.Monad.Rec.Class (Step(..), tailRec)
@@ -20,9 +23,12 @@ import Data.CodePoint.Unicode (isAlphaNum)
 
 import Yoga.Tree (Tree, Forest, showTree)
 import Yoga.Tree as Tree
-import Yoga.Tree.Extended (value, children) as Tree
+import Yoga.Tree.Extended (node, value, children, break) as Tree
 import Yoga.Tree.Extended.Path (Path)
 import Yoga.Tree.Extended.Path (root, fill, with, advance, up, find, depth) as Path
+
+import Yoga.JSON (E, class WriteForeign, class ReadForeign)
+import Yoga.JSON (writeJSON, readJSON, writeImpl, readImpl) as Y
 
 
 type LinesWithPaths = Array (Path /\ String)
@@ -176,3 +182,39 @@ fromString extract src =
                 level = String.length prefix
                 remainder = String.drop level source
             in { level, str : remainder }
+
+
+newtype JSONTree a = JSONTree (Tree a)
+
+derive instance Newtype (JSONTree a) _
+
+
+type JSONRec a = { v :: a, cs :: Array (JSONTree a) }
+
+
+instance WriteForeign a => WriteForeign (JSONTree a) where
+    writeImpl :: JSONTree a -> Foreign
+    writeImpl (JSONTree tree) =
+        Tree.break breakF tree
+        where
+            breakF :: a -> Array (Tree a) -> Foreign
+            breakF a cs =
+                Y.writeImpl
+                    { v  : Y.writeImpl a
+                    , cs : Y.writeImpl $ JSONTree <$> cs
+                    }
+
+
+instance ReadForeign a => ReadForeign (JSONTree a) where
+    readImpl :: Foreign -> F (JSONTree a)
+    readImpl f = do
+        (rec :: (JSONRec a)) <- Y.readImpl f
+        pure $ JSONTree $ Tree.node rec.v $ unwrap <$> rec.cs
+
+
+writeJSON :: forall a. WriteForeign a => Tree a -> String
+writeJSON = JSONTree >>> Y.writeJSON
+
+
+readJSON :: forall a. ReadForeign a => String -> E (Tree a)
+readJSON str = unwrap <$> (Y.readJSON str :: E (JSONTree a))

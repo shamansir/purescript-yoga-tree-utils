@@ -1,10 +1,12 @@
 module Test.Main where
 
 import Prelude
+import Foreign (renderForeignError)
 
-import Data.String (toUpper) as String
-import Data.Array (length) as Array
+import Data.String (toUpper, joinWith) as String
+import Data.Array (length, fromFoldable) as Array
 import Data.Maybe (Maybe(..))
+import Data.Either (Either(..))
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.Int (fromString) as Int
 
@@ -28,6 +30,7 @@ import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges) as
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, Dir(..)) as Path
 import Yoga.Tree.Extended.Convert as Convert
+import Yoga.JSON (writeJSON, readJSON, E)
 
 
 ql = Tree.leaf
@@ -498,6 +501,23 @@ main = launchAff_ $ runSpec [consoleReporter] do
             , ql 16
             ])
         )
+
+      it "`fromJson` / `toJson`: test converts to JSON and back" $ do
+        let
+          testTree =
+            1 :<
+              [ ql 11
+              , 12 :<~ [ 121, 122, 123 ]
+              , 13 :<~ [ 131 ]
+              , 14 :< [ ql 141, 142 :<~ [ 1421 ] ]
+              , 15 :<~ [ 151, 152 ]
+              , ql 16
+              ]
+          (convResult :: E (Tree Int)) = Convert.readJSON $ Convert.writeJSON testTree
+        case convResult of
+          Left errs -> fail $ String.joinWith ", " $ renderForeignError <$> Array.fromFoldable errs
+          Right convertedTree ->
+            testTree `compareTrees` convertedTree
 
 
 compareTrees ∷ forall (m :: Type -> Type) (a ∷ Type) (b ∷ Type). MonadThrow Ex.Error m => Show a => Show b => Tree a -> Tree b -> m Unit

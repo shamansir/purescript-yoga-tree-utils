@@ -14,6 +14,7 @@
             "strings",
             "tuples",
             "unicode",
+            "yoga-json",
             "yoga-tree"
           ],
           "build_plan": [
@@ -23,6 +24,7 @@
             "const",
             "contravariant",
             "control",
+            "datetime",
             "distributive",
             "effect",
             "either",
@@ -30,6 +32,8 @@
             "exceptions",
             "exists",
             "foldable-traversable",
+            "foreign",
+            "foreign-object",
             "free",
             "functions",
             "functors",
@@ -38,17 +42,22 @@
             "identity",
             "integers",
             "invariant",
+            "js-bigints",
+            "js-date",
             "lazy",
             "lists",
             "maybe",
             "newtype",
             "nonempty",
+            "now",
+            "nullable",
             "numbers",
             "ordered-collections",
             "orders",
             "partial",
             "prelude",
             "profunctor",
+            "record",
             "refs",
             "safe-coerce",
             "st",
@@ -57,9 +66,12 @@
             "transformers",
             "tuples",
             "type-equality",
+            "typelevel-prelude",
             "unfoldable",
             "unicode",
             "unsafe-coerce",
+            "variant",
+            "yoga-json",
             "yoga-tree"
           ]
         },
@@ -7523,6 +7535,16 @@
         "prelude"
       ]
     },
+    "js-bigints": {
+      "type": "git",
+      "url": "https://github.com/purescript-contrib/purescript-js-bigints.git",
+      "rev": "afdf6fa51635ca9d7c4c90762d3bff5693e0ed09",
+      "dependencies": [
+        "integers",
+        "maybe",
+        "prelude"
+      ]
+    },
     "js-date": {
       "type": "git",
       "url": "https://github.com/purescript-contrib/purescript-js-date.git",
@@ -7856,6 +7878,16 @@
         "tuples"
       ]
     },
+    "record": {
+      "type": "git",
+      "url": "https://github.com/purescript/purescript-record.git",
+      "rev": "c89cd1ada6b636692571fc374196b1c39c4c9f70",
+      "dependencies": [
+        "functions",
+        "prelude",
+        "unsafe-coerce"
+      ]
+    },
     "refs": {
       "type": "git",
       "url": "https://github.com/purescript/purescript-refs.git",
@@ -8038,6 +8070,59 @@
       "url": "https://github.com/purescript/purescript-unsafe-coerce.git",
       "rev": "ab956f82e66e633f647fb3098e8ddd3ec58d689f",
       "dependencies": []
+    },
+    "variant": {
+      "type": "git",
+      "url": "https://github.com/natefaubion/purescript-variant.git",
+      "rev": "8b2bd73a4202257d80a955c4dd36f6055f149823",
+      "dependencies": [
+        "enums",
+        "lists",
+        "maybe",
+        "partial",
+        "prelude",
+        "record",
+        "tuples",
+        "unsafe-coerce"
+      ]
+    },
+    "yoga-json": {
+      "type": "git",
+      "url": "https://github.com/rowtype-yoga/purescript-yoga-json.git",
+      "rev": "3c30b89b20aa140823591814e463b2e8a7995598",
+      "dependencies": [
+        "arrays",
+        "bifunctors",
+        "control",
+        "datetime",
+        "effect",
+        "either",
+        "exceptions",
+        "foldable-traversable",
+        "foreign",
+        "foreign-object",
+        "free",
+        "identity",
+        "integers",
+        "js-bigints",
+        "js-date",
+        "lists",
+        "maybe",
+        "newtype",
+        "nullable",
+        "numbers",
+        "ordered-collections",
+        "partial",
+        "prelude",
+        "record",
+        "strings",
+        "transformers",
+        "tuples",
+        "typelevel-prelude",
+        "unsafe-coerce",
+        "variant",
+        "yoga-tree"
+      ]
     },
     "yoga-tree": {
       "type": "git",

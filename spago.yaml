@@ -9,6 +9,7 @@ package:
     - strings
     - tuples
     - unicode
+    - yoga-json
     - yoga-tree
   name: yoga-tree-utils
   test:
