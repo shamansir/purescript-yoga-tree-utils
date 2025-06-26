@@ -34,6 +34,7 @@ data Mode
     | Paths
     | Lines
     | Corners
+    | Triangles
     | Dashes
 
 
@@ -76,11 +77,20 @@ toPathLines prefixGen tree =
 
 modeToF :: Mode -> (Depth -> IsLast -> Path -> String)
 modeToF = case _ of
-    Indent ->  \(Depth n) _ _ -> String.joinWith "" $ Array.replicate n " "
-    Paths ->   \_ _ path -> show path <> " // "
-    Lines ->   \(Depth n) _ _ -> if n == 0 then "" else "|-" <> (String.joinWith "" $ Array.replicate (n - 1) "-")
-    Corners -> \(Depth n) _ _ -> if n == 0 then "" else "├" <> (String.joinWith "" $ Array.replicate (n - 1) "─") -- ┠├└┡ ━
-    Dashes ->  \(Depth n) _ _->  if n == 0 then "" else "┊" <> (String.joinWith "" $ Array.replicate (n - 1) "┄")
+    Indent ->    \(Depth n) _ _ -> String.joinWith "" $ Array.replicate n " "
+    Paths ->     \_ _ path -> show path <> " // "
+    Lines ->     \(Depth n) _ _ -> if n == 0 then "" else "|-" <> (String.joinWith "" $ Array.replicate (n - 1) "-")
+    Triangles -> \(Depth n) _ _ -> if n == 0 then "" else ((String.joinWith "" $ Array.replicate (n - 1) "▹") <> "◦") -- ◦
+    Dashes ->    \(Depth n) _ _->  if n == 0 then "" else "┊" <> (String.joinWith "" $ Array.replicate (n - 1) "┄")
+    Corners ->   \(Depth n) isLast _ ->
+        if n == 0
+            then ""
+            else
+                ((String.joinWith "" $ Array.replicate (n - 1) "├")
+                <> case isLast of
+                        Last -> "└"
+                        NotLast -> "├") -- ┠├└┡ ━
+
 
 
 toString :: forall a. Mode -> (a -> String) -> Tree a -> String
