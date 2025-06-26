@@ -311,6 +311,60 @@ main = launchAff_ $ runSpec [consoleReporter] do
 
     describe "conversions" $ do
 
+      it "`toString`: Indent" $ do
+
+        (Convert.toString Convert.Indent show $ 1 :<
+            [ ql 11
+            , 12 :<~ [ 121, 122, 123 ]
+            , 13 :<~ [ 131 ]
+            , 14 :< [ ql 141, 142 :<~ [ 1421 ] ]
+            , 15 :<~ [ 151, 152 ]
+            , ql 16
+            ])
+        `shouldEqual` """1
+ 11
+ 12
+  121
+  122
+  123
+ 13
+  131
+ 14
+  141
+  142
+   1421
+ 15
+  151
+  152
+ 16"""
+
+      it "`toString`: Lines" $ do
+
+        (Convert.toString Convert.Lines show $ 1 :<
+            [ ql 11
+            , 12 :<~ [ 121, 122, 123 ]
+            , 13 :<~ [ 131 ]
+            , 14 :< [ ql 141, 142 :<~ [ 1421 ] ]
+            , 15 :<~ [ 151, 152 ]
+            , ql 16
+            ])
+        `shouldEqual` """1
+|-11
+|-12
+|--121
+|--122
+|--123
+|-13
+|--131
+|-14
+|--141
+|--142
+|---1421
+|-15
+|--151
+|--152
+|-16"""
+
       it "`fromString`: just root" $ do
 
         (Convert.fromString Int.fromString """1""" `compareTrees` (Tree.leaf $ Just 1))

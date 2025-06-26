@@ -2,6 +2,8 @@ module Yoga.Tree.Extended.Convert where
 
 import Prelude
 
+import Data.Newtype (class Newtype, wrap, unwrap)
+
 import Control.Comonad.Cofree (Cofree, head, mkCofree, tail, (:<))
 import Control.Monad.Rec.Class (Step(..), tailRec)
 
@@ -20,7 +22,7 @@ import Yoga.Tree (Tree, Forest, showTree)
 import Yoga.Tree as Tree
 import Yoga.Tree.Extended (value, children) as Tree
 import Yoga.Tree.Extended.Path (Path)
-import Yoga.Tree.Extended.Path (root, fill, with, advance, up, find) as Path
+import Yoga.Tree.Extended.Path (root, fill, with, advance, up, find, depth) as Path
 
 
 type LinesWithPaths = Array (Path /\ String)
@@ -28,15 +30,27 @@ type RenderStep = { current ∷ Forest (Path /\ String), drawn ∷ LinesWithPath
 
 
 data Mode
-    = Spaces -- editable
+    = Indent -- editable
     | Paths
+    | Lines
+    | Corners
+    | Dashes
 
 
-toLines :: (Int -> Path -> String) -> Tree String -> Array String
+data IsLast
+    = NotLast
+    | Last
+
+
+newtype Depth = Depth Int
+derive instance Newtype Depth _
+
+
+toLines :: (Depth -> IsLast -> Path -> String) -> Tree String -> Array String
 toLines prefixGen = toPathLines prefixGen >>> map Tuple.snd
 
 
-toPathLines :: (Int -> Path -> String) -> Tree String -> LinesWithPaths
+toPathLines :: (Depth -> IsLast -> Path -> String) -> Tree String -> LinesWithPaths
 toPathLines prefixGen tree =
     tailRec go { level: 0, drawn: [ head t ], current: (tail t) }
     where
@@ -49,16 +63,24 @@ toPathLines prefixGen tree =
             let
                 curPath = Tuple.fst $ head c :: Path
                 curVal  = Tuple.snd $ head c :: String
-                drawn = prefixGen l curPath <> curVal
+                drawn =
+                    prefixGen
+                        (Depth $ Path.depth curPath)
+                        (if (Array.length cs > 0) then NotLast else Last)
+                        curPath
+                    <> curVal
             in
                 Loop { level: l, drawn: s <> pure (curPath /\ drawn) <> (tailRec go { level: l + 1, drawn: [], current: (tail c) }), current: cs }
 
 
 
-modeToF :: Mode -> (Int -> Path -> String)
+modeToF :: Mode -> (Depth -> IsLast -> Path -> String)
 modeToF = case _ of
-    Spaces -> \n _ -> String.joinWith "" $ Array.replicate n " "
-    Paths -> \_ path -> show path <> " // "
+    Indent ->  \(Depth n) _ _ -> String.joinWith "" $ Array.replicate n " "
+    Paths ->   \_ _ path -> show path <> " // "
+    Lines ->   \(Depth n) _ _ -> if n == 0 then "" else "|-" <> (String.joinWith "" $ Array.replicate (n - 1) "-")
+    Corners -> \(Depth n) _ _ -> if n == 0 then "" else "├" <> (String.joinWith "" $ Array.replicate (n - 1) "─") -- ┠├└┡ ━
+    Dashes ->  \(Depth n) _ _->  if n == 0 then "" else "┊" <> (String.joinWith "" $ Array.replicate (n - 1) "┄")
 
 
 toString :: forall a. Mode -> (a -> String) -> Tree a -> String
@@ -66,7 +88,7 @@ toString mode convert = map convert >>> toLines (modeToF mode) >>> String.joinWi
 
 
 showTree' :: forall a. Show a => Tree a -> String
-showTree' = toString Spaces show
+showTree' = toString Indent show
 
 
 type PreParseStep    = { index :: Int, level :: Int, str :: String }
@@ -82,7 +104,7 @@ fromString extract src =
          #  Array.uncons
         <#> tryTree
         <#> _.tree
-         # fromMaybe emptyTree
+         #  fromMaybe emptyTree
     where
 
         foldF :: TreeParseStep a -> PreParseStep -> TreeParseStep a
