@@ -6,59 +6,25 @@
         "core": {
           "dependencies": [
             {
-              "arrays": "*"
+              "arrays": ">=7.3.0 <8.0.0"
             },
-            {
-              "bifunctors": "*"
-            },
-            {
-              "either": "*"
-            },
-            {
-              "foldable-traversable": "*"
-            },
-            {
-              "foreign": "*"
-            },
-            {
-              "free": "*"
-            },
-            {
-              "graphs": "*"
-            },
-            {
-              "lists": "*"
-            },
-            {
-              "maybe": "*"
-            },
-            {
-              "newtype": "*"
-            },
-            {
-              "ordered-collections": "*"
-            },
-            {
-              "prelude": "*"
-            },
-            {
-              "strings": "*"
-            },
-            {
-              "tailrec": "*"
-            },
-            {
-              "tuples": "*"
-            },
-            {
-              "unicode": "*"
-            },
-            {
-              "yoga-json": "*"
-            },
-            {
-              "yoga-tree": "*"
-            }
+            "bifunctors",
+            "either",
+            "foldable-traversable",
+            "foreign",
+            "free",
+            "graphs",
+            "lists",
+            "maybe",
+            "newtype",
+            "ordered-collections",
+            "prelude",
+            "strings",
+            "tailrec",
+            "tuples",
+            "unicode",
+            "yoga-json",
+            "yoga-tree"
           ],
           "build_plan": [
             "arrays",
