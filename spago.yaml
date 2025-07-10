@@ -1,16 +1,23 @@
 package:
   dependencies:
-    - arrays
-    - foldable-traversable
-    - free
-    - graphs
-    - maybe
-    - prelude
-    - strings
-    - tuples
-    - unicode
-    - yoga-json
-    - yoga-tree
+    - arrays: "*"
+    - bifunctors: "*"
+    - either: "*"
+    - foldable-traversable: "*"
+    - foreign: "*"
+    - free: "*"
+    - graphs: "*"
+    - lists: "*"
+    - maybe: "*"
+    - newtype: "*"
+    - ordered-collections: "*"
+    - prelude: "*"
+    - strings: "*"
+    - tailrec: "*"
+    - tuples: "*"
+    - unicode: "*"
+    - yoga-json: "*"
+    - yoga-tree: "*"
   name: yoga-tree-utils
   test:
     main: Test.Main
@@ -20,7 +27,14 @@ package:
       - debug
       - exceptions
       - transformers
+  publish:
+    version: 0.1.0
+    license: BSD-3-Clause
+    exclude:
+      - "test/**/*"
+    location:
+      githubOwner: shamansir
+      githubRepo: purescript-yoga-tree-utils
 workspace:
-  extraPackages: {}
   packageSet:
-    url: https://raw.githubusercontent.com/purescript/package-sets/psc-0.15.9-20230718/packages.json
+    registry: 65.1.0
