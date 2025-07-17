@@ -26,7 +26,7 @@ import Test.Spec.Runner (runSpec)
 import Yoga.Tree (showTree)
 import Yoga.Tree (appendChild) as Tree
 import Yoga.Tree.Extended (Tree, (:<~))
-import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges) as Tree
+import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, rebuildTree, rebuildTree') as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, Dir(..)) as Path
 import Yoga.Tree.Extended.Convert as Convert
@@ -311,6 +311,45 @@ main = launchAff_ $ runSpec [consoleReporter] do
         Path.advanceDir (Path [ 2, 2 ]) Path.Left tree `shouldEqual` (Path [ 2, 1 ]) -- go from `s` to `r`
         Path.advanceDir (Path [ 1 ]) Path.Left tree `shouldEqual` (Path [ 0 ]) -- previous for `c` is `b`
         Path.advanceDir Path.root Path.Left tree `shouldEqual`(Path.root) -- only root is next to the root
+
+
+    describe "rebuilding" $ do
+
+      let
+        srcTree      = "a" :< [ ql "b", ql "c", "d" :<~ [ "q", "r", "s" ], ql "e" ]
+
+      it "properly rebuilds tree by adding children with `rebuildTree`" $
+        let
+          rebuiltTree =
+              srcTree
+                  # Tree.rebuildTree
+                    \symb cs ->
+                        if symb == "c" then
+                            "+" /\ [ ql "x", ql "y", ql "z" ]
+                        else symb /\ cs
+          expectedTree = "a" :< [ ql "b", "+" :<~ [ "x", "y", "z" ], "d" :<~ [ "q", "r", "s" ], ql "e" ]
+        in rebuiltTree `compareTrees` expectedTree
+
+      it "properly rebuilds tree by adding children with `rebuildTree` deeper" $
+        let
+          rebuiltTree =
+              srcTree
+                  # Tree.rebuildTree
+                    \symb cs ->
+                        if symb == "r" then
+                            "r" /\ [ ql "rr", ql "rs", ql "rt" ]
+                        else symb /\ cs
+          expectedTree = "a" :< [ ql "b", ql "c", "d" :< [ ql "q", "r" :<~ [ "rr", "rs", "rt" ], ql "s" ], ql "e" ]
+        in rebuiltTree `compareTrees` expectedTree
+
+      it "removes chidren with `rebuildTree`" $
+        let
+          rebuiltTree =
+              srcTree
+                  # Tree.rebuildTree
+                    \symb cs -> if symb == "d" then "d" /\ [] else symb /\ cs
+          expectedTree = "a" :<~ [ "b", "c", "d", "e" ]
+        in rebuiltTree `compareTrees` expectedTree
 
     describe "conversions" $ do
 

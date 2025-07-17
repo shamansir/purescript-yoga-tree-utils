@@ -2,11 +2,13 @@ module Yoga.Tree.Extended where
 
 import Prelude
 
-import Control.Comonad.Cofree (head, tail, mkCofree) as Y
+import Control.Comonad.Cofree (head, tail, mkCofree, buildCofree) as Y
 import Control.Comonad.Cofree
+
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Array ((:))
 import Data.Array (head, catMaybes, concat, drop, reverse) as Array
+import Data.Tuple (uncurry) as Tuple
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.Traversable (sequence)
 
@@ -34,6 +36,23 @@ value = Y.head
 {-| Get children of the this tree node. |-}
 children :: forall n. Tree n -> Array (Tree n)
 children = Y.tail
+
+
+{-| Build tree starting from seed and getting further with every step from the next seeds. |-}
+buildTree :: forall s n. (s -> n /\ Array s) -> s -> Tree n
+buildTree = Y.buildCofree
+
+
+{-| Traverse the nodes of given tree with the given function, building a new tree with updated values and children.
+Notice that children are incoming being aready modified by the same function, so if you return empty array for chidren, nothing
+will come in later and the try won't visit deeper values. And vice versa. |-}
+rebuildTree :: forall a b. (a -> Array (Tree b) -> b /\ Array (Tree b)) -> Tree a -> Tree b
+rebuildTree f = break \a as -> Tuple.uncurry node $ f a $ rebuildTree f <$> as
+
+
+{-| Traverse the nodes of given tree with the given function, building a new tree with updated values and children |-}
+rebuildTree' :: forall a b. (a -> b /\ Array (Tree b)) -> Tree a -> Tree b
+rebuildTree' f = rebuildTree \a _ -> f a
 
 
 infixr 5 lnodeOp as :<~
