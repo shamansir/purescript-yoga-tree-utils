@@ -23,10 +23,9 @@ import Test.Spec.Assertions (fail, shouldEqual)
 import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpec)
 
-import Yoga.Tree (showTree)
 import Yoga.Tree (appendChild) as Tree
 import Yoga.Tree.Extended (Tree, (:<~))
-import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, rebuildTree, rebuildTree', break) as Tree
+import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, rebuildTree, rebuildTree', break, regroup) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, Dir(..)) as Path
 import Yoga.Tree.Extended.Convert as Convert
@@ -223,13 +222,13 @@ main = launchAff_ $ runSpec [consoleReporter] do
           case Path.find path tree of
             Just found ->
               found `compareTrees` expected
-            Nothing -> fail $ showTree expected <> " wasn't found at " <> show path
+            Nothing -> fail $ treeToString expected <> " wasn't found at " <> show path
 
         -- failToFind :: forall (m :: Type -> Type) a. MonadThrow Ex.Error m => Show a => Tree a -> Path -> m Unit
         failToFind tree path =
           case Path.find path tree of
             Just what ->
-              fail $ "expected to find nothing at " <> show path <> ", but found " <> showTree what
+              fail $ "expected to find nothing at " <> show path <> ", but found " <> treeToString what
             Nothing -> pure unit
 
       it "`find` on a one-leaf tree" $
@@ -374,6 +373,17 @@ main = launchAff_ $ runSpec [consoleReporter] do
           expectedTree = "a" :< [ ql "b", ql "c", "d" :< [ "foo" :<~ [ "q" ], "bar" :<~ [ "r" ], "s" :<~ [ "s" ] ], ql "e" ]
 
         in rebuiltTree `compareTrees` expectedTree
+
+    describe "regrouping" $ do
+
+      let
+        srcTree = 0 :<~ [ 10, 11, 12, 20, 22, 33, 35, 49, 77 ]
+
+      it "properly rebuilds tree by adding children with `rebuildTree`" $
+        let
+          regroupedTree = srcTree # Tree.regroup (_ == 0) (_ `div` 10) (_ * 10)
+          expectedTree = 0 :< [ 10 :<~ [ 10, 11, 12 ], 20 :<~ [ 20, 22 ], 30 :<~ [ 33, 35 ], 40 :<~ [ 49 ], 70 :<~ [ 77 ] ]
+        in regroupedTree `compareTrees` expectedTree
 
     describe "conversions" $ do
 
@@ -583,6 +593,10 @@ main = launchAff_ $ runSpec [consoleReporter] do
             testTree `compareTrees` convertedTree
 
 
+treeToString :: forall a. Show a => Tree a -> String
+treeToString = Convert.toString Convert.Dashes show
+
+
 compareTrees ∷ forall (m :: Type -> Type) (a ∷ Type) (b ∷ Type). MonadThrow Ex.Error m => Show a => Show b => Tree a -> Tree b -> m Unit
 compareTrees treeA treeB =
-  (showTree treeA) `shouldEqual` (showTree treeB)
+  (treeToString treeA) `shouldEqual` (treeToString treeB)
