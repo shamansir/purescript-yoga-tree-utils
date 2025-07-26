@@ -39,21 +39,21 @@ children :: forall n. Tree n -> Array (Tree n)
 children = Y.tail
 
 
-{-| Build tree starting from seed and getting further with every step from the next seeds. |-}
-buildTree :: forall s n. (s -> n /\ Array s) -> s -> Tree n
-buildTree = Y.buildCofree
+{-| Build tree starting from seed and getting further with every step using the next seeds provided in response. |-}
+build :: forall s n. (s -> n /\ Array s) -> s -> Tree n
+build = Y.buildCofree
 
 
-{-| Traverse the nodes of given tree with the given function, building a new tree with updated values and children.
+{-| Traverse the nodes of given tree with the function, building a new tree with updated values and children.
 Notice that children are incoming being aready modified by the same function, so if you return empty array for chidren, nothing
 will come in later and the try won't visit deeper values. And vice versa. |-}
-rebuildTree :: forall a b. (a -> Array (Tree b) -> b /\ Array (Tree b)) -> Tree a -> Tree b
-rebuildTree f = break \a as -> Tuple.uncurry node $ f a $ rebuildTree f <$> as
+alter :: forall a b. (a -> Array (Tree b) -> b /\ Array (Tree b)) -> Tree a -> Tree b
+alter f = break \a as -> Tuple.uncurry node $ f a $ alter f <$> as
 
 
-{-| Traverse the nodes of given tree with the given function, building a new tree with updated values and children |-}
-rebuildTree' :: forall a b. (a -> b /\ Array (Tree b)) -> Tree a -> Tree b
-rebuildTree' f = rebuildTree \a _ -> f a
+{-| Traverse the nodes of given tree with the function, building a new tree with updated values and children |-}
+alter' :: forall a b. (a -> b /\ Array (Tree b)) -> Tree a -> Tree b
+alter' f = alter $ const <<< f
 
 
 infixr 5 lnodeOp as :<~
@@ -126,7 +126,7 @@ catMaybes rootDefault =
 |-}
 regroup :: forall a k. Ord k => (a -> Boolean) -> (a -> k) -> (k -> a) -> Tree a -> Tree a
 regroup needsRegroup valToKey keyToVal =
-    rebuildTree \v xs ->
+    alter \v xs ->
       if needsRegroup v then
         v /\
         (xs

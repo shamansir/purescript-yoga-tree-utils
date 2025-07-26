@@ -25,7 +25,7 @@ import Test.Spec.Runner (runSpec)
 
 import Yoga.Tree (appendChild) as Tree
 import Yoga.Tree.Extended (Tree, (:<~))
-import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, rebuildTree, rebuildTree', break, regroup) as Tree
+import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, alter, alter', break, regroup) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, Dir(..)) as Path
 import Yoga.Tree.Extended.Convert as Convert
@@ -321,7 +321,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
         let
           rebuiltTree =
               srcTree
-                  # Tree.rebuildTree
+                  # Tree.alter
                     \symb cs ->
                         if symb == "c" then
                             "+" /\ [ ql "x", ql "y", ql "z" ]
@@ -333,7 +333,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
         let
           rebuiltTree =
               srcTree
-                  # Tree.rebuildTree
+                  # Tree.alter
                     \symb cs ->
                         if symb == "r" then
                             "r" /\ [ ql "rr", ql "rs", ql "rt" ]
@@ -345,7 +345,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
         let
           rebuiltTree =
               srcTree
-                  # Tree.rebuildTree
+                  # Tree.alter
                     \symb cs -> if symb == "d" then "d" /\ [] else symb /\ cs
           expectedTree = "a" :<~ [ "b", "c", "d", "e" ]
         in rebuiltTree `compareTrees` expectedTree
@@ -354,7 +354,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
         let
           rebuiltTree =
               srcTree
-                  # Tree.rebuildTree
+                  # Tree.alter
                     \symb cs -> if symb == "d" then "foo" /\ [ "d" :< cs ] else symb /\ cs
           expectedTree = "a" :< [ ql "b", ql "c", "foo" :< [ "d" :<~ [ "q", "r", "s" ] ], ql "e" ]
         in rebuiltTree `compareTrees` expectedTree
@@ -367,7 +367,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
           breakF   x cs = Tree.node    x  [   x :< cs ]
           rebuiltTree =
               srcTree
-                  # Tree.rebuildTree
+                  # Tree.alter
                     \symb cs ->
                       if symb == "d" then "d" /\ (Tree.break breakF <$> cs) else symb /\ cs
           expectedTree = "a" :< [ ql "b", ql "c", "d" :< [ "foo" :<~ [ "q" ], "bar" :<~ [ "r" ], "s" :<~ [ "s" ] ], ql "e" ]
