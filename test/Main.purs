@@ -25,11 +25,12 @@ import Test.Spec.Runner (runSpec)
 
 import Yoga.Tree (appendChild) as Tree
 import Yoga.Tree.Extended (Tree, (:<~))
-import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, alter, alter', break, regroup) as Tree
+import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, alter, break, regroup) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, dashed, Dir(..)) as Path
-import Yoga.Tree.Extended.Convert as Convert
-import Yoga.JSON (writeJSON, readJSON, E)
+import Yoga.Tree.Extended.Convert (Mode(..), fromString, readJSON, toString, writeJSON) as Convert
+import Yoga.Tree.Extended.Convert.Dot (DotId(..), dotConvertWithLabel, toDotText, toDotText') as Convert
+import Yoga.JSON (E)
 
 
 ql = Tree.leaf
