@@ -290,3 +290,9 @@ advanceDir path@(Path pathArr) Left tree =
                             else path
                     Nothing -> path
             Nothing -> path
+
+
+{-| Convert to dashed text: `[ 0, 10, 12 ]` becomes `"0-10-12"`, `[]` becomes `"*"` |-}
+dashed :: Path -> String
+dashed (Path []) = "*"
+dashed (Path trace) = String.joinWith "-" $ show <$> trace

@@ -1,29 +1,31 @@
 module Yoga.Tree.Extended.Convert where
 
 import Prelude
-import Foreign (F, Foreign, ForeignError)
+import Foreign (F, Foreign)
 
-import Data.Newtype (class Newtype, wrap, unwrap)
-import Data.Either (Either(..))
-import Data.List.NonEmpty (NonEmptyList)
+import Data.Newtype (class Newtype, unwrap)
 
-import Control.Comonad.Cofree (Cofree, head, mkCofree, tail, (:<))
+import Control.Comonad.Cofree (head, tail)
 import Control.Monad.Rec.Class (Step(..), tailRec)
 
 import Data.Function (applyN)
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Array (snoc, uncons, replicate, length, range) as Array
-import Data.Tuple (fst, snd) as Tuple
+import Data.Array (uncons, replicate, length) as Array
+import Data.Tuple (fst, snd, uncurry) as Tuple
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.String (Pattern(..))
 import Data.String (joinWith, split, length, takeWhile, drop) as String
 import Data.Foldable (foldl)
 import Data.FunctorWithIndex (mapWithIndex)
 import Data.CodePoint.Unicode (isAlphaNum)
+import Data.DotLang (Edge(..), EdgeType(..), Graph, Node(..), graphFromElements) as Dot
+import Data.DotLang.Class (toText) as Dot
+import Data.DotLang.Attr.Node as DotNode
+import Data.DotLang.Attr.Edge as DotEdge
 
-import Yoga.Tree (Tree, Forest, showTree)
-import Yoga.Tree as Tree
-import Yoga.Tree.Extended (node, value, children, break) as Tree
+import Yoga.Tree (Tree, Forest)
+import Yoga.Tree (appendChild, leaf)as Tree
+import Yoga.Tree.Extended (node, children, break, flatten, edges) as Tree
 import Yoga.Tree.Extended.Path (Path)
 import Yoga.Tree.Extended.Path (root, fill, with, advance, up, find, depth) as Path
 
@@ -218,3 +220,66 @@ writeJSON = JSONTree >>> Y.writeJSON
 
 readJSON :: forall a. ReadForeign a => String -> E (Tree a)
 readJSON str = unwrap <$> (Y.readJSON str :: E (JSONTree a))
+
+
+newtype DotId = DotId String
+
+derive instance Newtype DotId _
+
+
+type DotConvert a =
+    { toId :: Path -> a -> DotId
+    , nodeAttrs :: Path -> a -> Array DotNode.Attr
+    , edgeAttrs :: Path /\ a -> Path /\ a -> Dot.EdgeType /\ Array DotEdge.Attr
+    }
+
+
+toDot :: forall a. (a -> String) -> Tree a -> Dot.Graph
+toDot toLabel =
+    toDot'
+        { toId : const (toLabel >>> DotId)
+        , nodeAttrs : const $ const []
+        , edgeAttrs : const $ const $ Dot.Forward /\ []
+        }
+
+
+toDot' :: forall a. DotConvert a -> Tree a -> Dot.Graph
+toDot' convert tree =
+    Dot.graphFromElements nodes edges
+    where
+        treeWithPaths = Path.fill tree
+        nodes = Tuple.uncurry makeDotNode <$> Tree.flatten treeWithPaths
+        edges = Tuple.uncurry makeDotEdge <$> Tree.edges treeWithPaths
+        makeDotNode path a = Dot.Node (unwrap $ convert.toId path a) $ convert.nodeAttrs path a
+        makeDotEdge (startP /\ startV) (endP /\ endV) =
+            case convert.edgeAttrs (startP /\ startV) (endP /\ endV) of
+                (edgeType /\ edgeAttrs) ->
+                    Dot.Edge
+                        edgeType
+                        (unwrap $ convert.toId startP startV)
+                        (unwrap $ convert.toId endP endV)
+                        edgeAttrs
+
+
+toDotText :: forall a. (a -> String) -> Tree a -> String
+toDotText f = toDot f >>> Dot.toText
+
+
+toDotText' :: forall a. DotConvert a -> Tree a -> String
+toDotText' conv = toDot' conv >>> Dot.toText
+
+
+dotConvertDefault :: forall a. (a -> String) -> DotConvert a
+dotConvertDefault toId =
+    { toId : const (toId >>> DotId)
+    , nodeAttrs : const $ const []
+    , edgeAttrs : const $ const $ Dot.Forward /\ []
+    }
+
+
+dotConvertWithLabel :: forall a. (Path -> a -> DotId) -> (Path -> a -> String) -> DotConvert a
+dotConvertWithLabel toDotId toLabel =
+    { toId : toDotId
+    , nodeAttrs : \path -> pure <<< DotNode.Label <<< DotNode.TextLabel <<< toLabel path
+    , edgeAttrs : const $ const $ Dot.Forward /\ []
+    }

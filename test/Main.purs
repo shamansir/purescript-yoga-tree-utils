@@ -27,7 +27,7 @@ import Yoga.Tree (appendChild) as Tree
 import Yoga.Tree.Extended (Tree, (:<~))
 import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, alter, alter', break, regroup) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
-import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, Dir(..)) as Path
+import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, dashed, Dir(..)) as Path
 import Yoga.Tree.Extended.Convert as Convert
 import Yoga.JSON (writeJSON, readJSON, E)
 
@@ -591,6 +591,42 @@ main = launchAff_ $ runSpec [consoleReporter] do
           Left errs -> fail $ String.joinWith ", " $ renderForeignError <$> Array.fromFoldable errs
           Right convertedTree ->
             testTree `compareTrees` convertedTree
+
+
+      it "`toDot`" $ do
+        let
+          testTree =
+            1 :<
+              [ ql 11
+              , 12 :<~ [ 121, 122, 123 ]
+              , 13 :<~ [ 131 ]
+              , 14 :< [ ql 141, 142 :<~ [ 1421 ] ]
+              , 15 :<~ [ 151, 152, 11 ]
+              , ql 16
+              ]
+        Convert.toDotText show testTree
+        `shouldEqual`
+        "digraph {1 []; 11 []; 12 []; 121 []; 122 []; 123 []; 13 []; 131 []; 14 []; 141 []; 142 []; 1421 []; 15 []; 151 []; 152 []; 11 []; 16 []; 1 -> 11; 1 -> 12; 1 -> 13; 1 -> 14; 1 -> 15; 1 -> 16; 12 -> 121; 12 -> 122; 12 -> 123; 13 -> 131; 14 -> 141; 14 -> 142; 142 -> 1421; 15 -> 151; 15 -> 152; 15 -> 11; }"
+
+      it "`toDot` v.2" $ do
+        let
+          testTree =
+            1 :<
+              [ ql 11
+              , 12 :<~ [ 121, 122, 123 ]
+              , 13 :<~ [ 131 ]
+              , 14 :< [ ql 141, 142 :<~ [ 1421 ] ]
+              , 15 :<~ [ 151, 152, 11 ]
+              , ql 16
+              ]
+          toDotId path v =
+            -- just the path is enough for uniqueness
+            Convert.DotId $ "\"" <> Path.dashed path <> "::" <> show v <> "\""
+          toLabel path v =
+            show v
+        Convert.toDotText' (Convert.dotConvertWithLabel toDotId toLabel) testTree
+        `shouldEqual`
+        """digraph {"*::1" [label="1"]; "0::11" [label="11"]; "1::12" [label="12"]; "1-0::121" [label="121"]; "1-1::122" [label="122"]; "1-2::123" [label="123"]; "2::13" [label="13"]; "2-0::131" [label="131"]; "3::14" [label="14"]; "3-0::141" [label="141"]; "3-1::142" [label="142"]; "3-1-0::1421" [label="1421"]; "4::15" [label="15"]; "4-0::151" [label="151"]; "4-1::152" [label="152"]; "4-2::11" [label="11"]; "5::16" [label="16"]; "*::1" -> "0::11"; "*::1" -> "1::12"; "*::1" -> "2::13"; "*::1" -> "3::14"; "*::1" -> "4::15"; "*::1" -> "5::16"; "1::12" -> "1-0::121"; "1::12" -> "1-1::122"; "1::12" -> "1-2::123"; "2::13" -> "2-0::131"; "3::14" -> "3-0::141"; "3::14" -> "3-1::142"; "3-1::142" -> "3-1-0::1421"; "4::15" -> "4-0::151"; "4::15" -> "4-1::152"; "4::15" -> "4-2::11"; }"""
 
 
 treeToString :: forall a. Show a => Tree a -> String

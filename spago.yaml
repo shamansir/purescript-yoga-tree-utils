@@ -1,5 +1,6 @@
 package:
   dependencies:
+    - dotlang
     - arrays: ">=7.3.0 <8.0.0"
     - bifunctors: ">=6.1.0 <7.0.0"
     - either: ">=6.1.0 <7.0.0"
@@ -39,3 +40,5 @@ package:
 workspace:
   packageSet:
     registry: 65.1.0
+  extraPackages:
+    dotlang: 4.0.0
