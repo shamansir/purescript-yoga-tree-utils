@@ -12,9 +12,6 @@
               "bifunctors": ">=6.1.0 <7.0.0"
             },
             {
-              "dotlang": ">=4.0.0 <5.0.0"
-            },
-            {
               "either": ">=6.1.0 <7.0.0"
             },
             {
@@ -67,14 +64,11 @@
             "arrays",
             "bifunctors",
             "catenable-lists",
-            "colors",
-            "console",
             "const",
             "contravariant",
             "control",
             "datetime",
             "distributive",
-            "dotlang",
             "effect",
             "either",
             "enums",
@@ -106,7 +100,6 @@
             "partial",
             "prelude",
             "profunctor",
-            "psci-support",
             "record",
             "refs",
             "safe-coerce",
@@ -732,9 +725,7 @@
         "zipperarray": "2.0.0"
       }
     },
-    "extra_packages": {
-      "dotlang": "4.0.0"
-    }
+    "extra_packages": {}
   },
   "packages": {
     "aff": {
@@ -830,28 +821,6 @@
         "unfoldable"
       ]
     },
-    "colors": {
-      "type": "registry",
-      "version": "7.0.1",
-      "integrity": "sha256-udlg/y2PFsHYli8Tgz8BQGGrOjyGo0BcJj36IfgYADs=",
-      "dependencies": [
-        "arrays",
-        "integers",
-        "lists",
-        "numbers",
-        "partial",
-        "strings"
-      ]
-    },
-    "console": {
-      "type": "registry",
-      "version": "6.1.0",
-      "integrity": "sha256-CxmAzjgyuGDmt9FZW51VhV6rBPwR6o0YeKUzA9rSzcM=",
-      "dependencies": [
-        "effect",
-        "prelude"
-      ]
-    },
     "const": {
       "type": "registry",
       "version": "6.0.0",
@@ -925,21 +894,6 @@
         "prelude",
         "tuples",
         "type-equality"
-      ]
-    },
-    "dotlang": {
-      "type": "registry",
-      "version": "4.0.0",
-      "integrity": "sha256-Z/2qsjbM4tyY/Q4j1kqjBZyWTGV3+9uiKlNpMLNjf5U=",
-      "dependencies": [
-        "arrays",
-        "colors",
-        "console",
-        "effect",
-        "maybe",
-        "prelude",
-        "psci-support",
-        "strings"
       ]
     },
     "effect": {
@@ -1371,16 +1325,6 @@
         "newtype",
         "prelude",
         "tuples"
-      ]
-    },
-    "psci-support": {
-      "type": "registry",
-      "version": "6.0.0",
-      "integrity": "sha256-C6ql4P9TEP06hft/1Z5QumPA4yARR4VIxDdhmL1EO+Y=",
-      "dependencies": [
-        "console",
-        "effect",
-        "prelude"
       ]
     },
     "record": {
