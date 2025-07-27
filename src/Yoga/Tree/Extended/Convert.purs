@@ -42,6 +42,10 @@ data Mode
     | Dashes
 
 
+derive instance Eq Mode
+derive instance Ord Mode
+
+
 data IsLast
     = NotLast
     | Last
