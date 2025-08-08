@@ -7,6 +7,7 @@ import Data.Newtype (class Newtype, unwrap)
 
 import Control.Comonad.Cofree (head, tail)
 import Control.Monad.Rec.Class (Step(..), tailRec)
+import Control.Plus (class Plus, empty)
 
 import Data.Function (applyN)
 import Data.Maybe (Maybe(..), fromMaybe)
@@ -59,6 +60,10 @@ toLines :: (Depth -> IsLast -> Path -> String) -> Tree String -> Array String
 toLines prefixGen = toPathLines prefixGen >>> map Tuple.snd
 
 
+toLinesUsing :: Mode -> Tree String -> Array String
+toLinesUsing = toLines <<< modeToF
+
+
 toPathLines :: (Depth -> IsLast -> Path -> String) -> Tree String -> LinesWithPaths
 toPathLines prefixGen tree =
     tailRec go { level: 0, drawn: [ head t ], current: (tail t) }
@@ -82,6 +87,9 @@ toPathLines prefixGen tree =
                 Loop { level: l, drawn: s <> pure (curPath /\ drawn) <> (tailRec go { level: l + 1, drawn: [], current: (tail c) }), current: cs }
 
 
+toPathLinesUsing :: Mode -> Tree String -> LinesWithPaths
+toPathLinesUsing = toPathLines <<< modeToF
+
 
 modeToF :: Mode -> (Depth -> IsLast -> Path -> String)
 modeToF = case _ of
@@ -102,19 +110,19 @@ modeToF = case _ of
 
 
 toString :: forall a. Mode -> (a -> String) -> Tree a -> String
-toString mode convert = map convert >>> toLines (modeToF mode) >>> String.joinWith "\n"
+toString mode convert = map convert >>> toLinesUsing mode >>> String.joinWith "\n"
 
 
 showTree' :: forall a. Show a => Tree a -> String
 showTree' = toString Indent show
 
 
-type PreParseStep    = { index :: Int, level :: Int, str :: String }
-type TreeParseStep a = { path :: Path, prevLevel :: Int, tree :: Tree (Maybe a) }
+type PreParseStep      = { index :: Int, level :: Int, str :: String }
+type TreeParseStep f a = { path :: Path, prevLevel :: Int, tree :: Tree (f  a) }
 
 
-fromString :: forall a. (String -> Maybe a) -> String -> Tree (Maybe a)
-fromString extract src =
+fromString' :: forall f a. Plus f => (String -> f a) -> String -> Tree (f a)
+fromString' extract src =
     String.split (Pattern "\n") src
         <#> extractLevel
          #  mapWithIndex (/\)
@@ -125,7 +133,7 @@ fromString extract src =
          #  fromMaybe emptyTree
     where
 
-        foldF :: TreeParseStep a -> PreParseStep -> TreeParseStep a
+        foldF :: TreeParseStep f a -> PreParseStep -> TreeParseStep f a
         foldF { path, tree, prevLevel } { index, level, str } =
 
             if (level == prevLevel) || (prevLevel == 0 && level > prevLevel) then
@@ -165,10 +173,10 @@ fromString extract src =
                 , prevLevel : level
                 }
 
-        emptyTree :: Tree (Maybe a)
-        emptyTree = Tree.leaf Nothing
+        emptyTree :: Tree (f a)
+        emptyTree = Tree.leaf empty
 
-        tryTree :: { head :: PreParseStep, tail :: Array PreParseStep } -> TreeParseStep a
+        tryTree :: { head :: PreParseStep, tail :: Array PreParseStep } -> TreeParseStep f a
         tryTree { head, tail } =
             if (head.index == 0) && (head.level == 0)
                 then foldl foldF ({ path : Path.root, tree : Tree.leaf $ extract head.str, prevLevel : 0 }) tail
@@ -184,6 +192,10 @@ fromString extract src =
                 level = String.length prefix
                 remainder = String.drop level source
             in { level, str : remainder }
+
+
+fromString :: forall a. (String -> Maybe a) -> String -> Tree (Maybe a)
+fromString = fromString'
 
 
 newtype JSONTree a = JSONTree (Tree a)
