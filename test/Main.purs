@@ -6,7 +6,7 @@ import Foreign (renderForeignError)
 import Data.String (toUpper, joinWith) as String
 import Data.Array (length, fromFoldable) as Array
 import Data.Maybe (Maybe(..), fromMaybe)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.Int (fromString) as Int
 
@@ -25,7 +25,7 @@ import Test.Spec.Runner (runSpec)
 
 import Yoga.Tree (appendChild) as Tree
 import Yoga.Tree.Extended (Tree, (:<~))
-import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, alter, break, regroup, regroup_) as Tree
+import Yoga.Tree.Extended as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, dashed, Dir(..)) as Path
 import Yoga.Tree.Extended.Convert (Mode(..), fromString, readJSON, toString, writeJSON) as Convert
@@ -424,6 +424,109 @@ main = launchAff_ $ runSpec [consoleReporter] do
                   (\a k -> (fromMaybe 0 $ Int.fromString k) * 100 + a)
           expectedTree = 0 :< [ 110 :<~ [ 10, 11, 12 ], 220 :<~ [ 20, 22 ], 333 :<~ [ 33, 35 ], 449 :<~ [ 49 ], 777 :<~ [ 77 ] ]
         in regroupedTree `compareTrees` expectedTree
+
+      it "simple case with regrouping" $
+        let
+          l = Left
+          r = Right
+          srcTreeAlt = l [ "root" ] :<
+            [ l [ "root", "a", "b", "c" ] :<~ [ r "a-b-c-1", r "a-b-c-2" ]
+            , l [ "root", "a", "b" ] :<~ [ r "a-b-1", r "a-b-2", r "a-b-3" ]
+            ]
+          regroupedTree = srcTreeAlt
+              # Tree.regroupByPath
+                  (case _ of
+                    Left k -> Just k
+                    Right "root" -> Just [ "root" ]
+                    _ -> Nothing
+                  )
+              # map (either l identity)
+          expectedTree =
+            l [] :<
+              [ l [ "root" ] :<
+                  [ l [ "root", "a", "b" ]
+                      :< [ pure $ r "a-b-1", pure $ r "a-b-2", pure $ r "a-b-3"
+                         , l [ "root", "a", "b", "c" ] :<~ [ r "a-b-c-1", r "a-b-c-2" ]
+                         ]
+                  ]
+              ]
+        in
+          regroupedTree `compareTrees` expectedTree
+
+      it "complex case with regrouping" $
+        let
+          l = Left
+          r = Right
+          srcTreeAlt = l [ "root" ] :<
+            [ l [ "a", "b", "c" ] :<~ [ r "a-b-c-1", r "a-b-c-2" ]
+            , l [ "a", "b" ] :<~ [ r "a-b-1", r "a-b-2", r "a-b-3" ]
+            , l [ "a", "b", "x" ] :<~ [ r "a-b-x-1", r "a-b-x-2", r "a-b-x-3" ]
+            , l [ "a" ] :<~ [ r "a-1" ]
+            , l [ "a", "b" ] :<~ [ r "a-b-4" ]
+            , l [ "b" ] :<~ [ r "b-1" ]
+            , l [ "a", "b" ] :<~ [ r "a-b-5" ]
+            , l [ "a", "b", "c" ] :<~ [ r "a-b-c-3", r "a-b-c-4" ]
+            , l [ "b", "x" ] :<~ [ r "b-x-1" ]
+            ]
+          regroupedTree = srcTreeAlt
+              # Tree.regroupByPath
+                  (case _ of
+                    Left k -> Just k
+                    Right "root" -> Just [ "root" ]
+                    Right _ -> Nothing)
+              # map (either l identity)
+          expectedTree =
+            l [] :<
+              [ l [ "a" ] :<
+                  [ pure $ r "a-1"
+                  , l [ "a", "b" ]
+                      :< [ pure $ r "a-b-1", pure $ r "a-b-2", pure $ r "a-b-3", pure $ r "a-b-4", pure $ r "a-b-5"
+                         , l [ "a", "b", "c" ] :<~ [ r "a-b-c-1", r "a-b-c-2", r "a-b-c-3", r "a-b-c-4" ]
+                         , l [ "a", "b", "x" ] :<~ [ r "a-b-x-1", r "a-b-x-2", r "a-b-x-3" ]
+                         ]
+                  ]
+              , l [ "b" ] :< [ pure $ r "b-1", l [ "b", "x" ] :<~ [ r "b-x-1" ] ]
+              , l [ "root" ] :< []
+              ]
+        in
+          regroupedTree `compareTrees` expectedTree
+
+      {-
+      it "mergeEqual" $
+        let
+          l = Left
+          r = Right
+          srcTreeAlt = l [] :<
+            [ l [ 1 ] :<~ [ r "1-1", r "1-2" ]
+            , l [ 1, 2 ] :<~ [ r "1-2-1", r "1-2-2", r "1-2-3" ]
+            , l [ 1 ] :<~ [ r "1-3", r "1-4" ]
+            , l [ 1, 2 ] :<~ [ r "1-2-4", r "1-2-5" ]
+            , l [ 3 ] :<
+                [ l [ 1 ] :<~ [ r "1-5", r "1-6" ]
+                , pure $ r "3-1"
+                , l [ 1, 2 ] :<~ [ r "1-2-6", r "1-2-7" ]
+                , l [ 1 ] :<~ [ r "1-7" ]
+                ]
+            ]
+          regroupedTree = srcTreeAlt
+              # Tree.mergeEqualBy
+                  compareF
+          compareF (Left ipA) (Left ipB) = ipA == ipB
+          compareF _ _ = false
+          expectedTree =
+            r "a" :<
+              [ l [ 1 ] :<~ [ r "1-1", r "1-2", r "1-3", r "1-4" ]
+              , l [ 1, 2 ] :<~ [ r "1-2-1", r "1-2-2", r "1-2-3", r "1-2-4", r "1-2-5" ]
+              , l [ 3 ] :<
+                      [ pure $ r "3-1"
+                      , l [ 1 ] :<~ [ r "1-5", r "1-6", r "1-7" ]
+                      , l [ 1, 2 ] :<~ [ r "1-2-6", r "1-2-7" ]
+                      ]
+              ]
+        in
+          regroupedTree `compareTrees` expectedTree
+        -}
+
 
     describe "conversions" $ do
 

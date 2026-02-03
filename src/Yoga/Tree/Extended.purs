@@ -6,12 +6,18 @@ import Control.Comonad.Cofree (head, tail, mkCofree, buildCofree) as Y
 import Control.Comonad.Cofree
 
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Either (Either(..))
 import Data.Array ((:))
-import Data.Array (head, catMaybes, concat, drop, reverse, groupAllBy) as Array
+import Data.Set (toUnfoldable) as Set
+import Data.Array as Array
 import Data.Array.NonEmpty (head, toArray) as NEA
-import Data.Tuple (uncurry) as Tuple
+import Data.Tuple (uncurry, fst, snd) as Tuple
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.Traversable (sequence)
+import Data.Foldable (foldl)
+import Data.FoldableWithIndex (foldlWithIndex)
+import Data.Map (Map)
+import Data.Map as Map
 
 import Yoga.Tree (Tree, leaf, mkTree, setNodeValue, modifyNodeValue) as Y
 
@@ -155,6 +161,109 @@ regroup_ needsRegroup valToKey keyToVal =
         let prevVal = value $ NEA.head nea
         in node (keyToVal prevVal $ valToKey prevVal)
           $ NEA.toArray nea
+
+data PHelper a
+    = G (Array String)
+    | N a
+
+
+extractA :: forall a. (Array String -> a) -> PHelper a -> a
+extractA pToA (G path) = pToA path
+extractA _    (N a) = a
+
+
+type RegroupV a = Either (Array String) a
+type SplitV a = { values :: Array a, groups :: Array (Array String /\ Array (Tree a)), rest :: Array (Tree a) }
+
+
+data Tmp a
+    = G' String (Array (Tmp a))
+    | V' a
+    | X'
+
+
+type PathsCollectedMap = Map (Array String) Boolean
+type RegroupedChildren a = Array (Tree (RegroupV a))
+
+
+{-| Group children by path hierarchy, merging nodes with identical paths. |-}
+regroupByPath :: forall a. Eq a => (a -> Maybe (Array String)) -> Tree a -> Tree (RegroupV a)
+regroupByPath getPath tree =
+    pathsLoop [] 1
+    # node (Left [])
+    where
+        pathToValues = tree # break (breakF [] Map.empty)
+        allPaths =
+            pathToValues
+            # Map.keys
+            # Set.toUnfoldable
+            # Array.sort
+        maxLength :: Int
+        maxLength = allPaths <#> Array.length # foldl max 0
+        nextPathsOf parent n =
+            allPaths # Array.filter
+                (\path ->
+                    (Array.length path == Array.length parent + n)
+                    && foldlWithIndex (equalSegment parent) true (Array.dropEnd n path)
+                )
+        equalSegment :: Array String -> Int -> Boolean -> String -> Boolean
+        equalSegment parent segIdx before chSeg = before && (Array.index parent segIdx <#> (_ == chSeg) # fromMaybe false)
+        pathsLoop :: Array String -> Int -> Array (Tree (RegroupV a))
+        pathsLoop parent n =
+            if (n < maxLength) then
+                let nextPaths = nextPathsOf parent n
+                in case nextPaths of
+                    [] -> pathsLoop parent $ n + 1
+                    _ ->
+                        foldl
+                            (\prev npath ->
+                                prev
+                                <> [
+                                        node (Left npath) $
+                                        ( map (Right >>> leaf)
+                                        $ fromMaybe []
+                                        $ Map.lookup npath pathToValues
+                                        )
+                                        <> pathsLoop npath 1
+                                    ]
+                            )
+                            []
+                            nextPaths
+            else []
+
+        -- postFoldlF :: (PathsCollectedMap /\ RegroupedChildren a) -> Array String -> (PathsCollectedMap /\ RegroupedChildren a)
+        -- postFoldlF (pathsCollected /\ collected) = ?wh
+        -- newNodeFor :: (Array String /\ Array a) -> Tree (RegroupV a)
+
+        -- rootVal = value tree
+        alterF :: Array a -> Maybe (Array a) -> Maybe (Array a)
+        alterF toAppend Nothing = Just toAppend
+        alterF toAppend (Just arr) = Just $ arr <> toAppend
+        splitF :: SplitV a -> Tree a -> SplitV a
+        splitF split_ = break \n xs ->
+            case getPath n of
+                Just path -> split_ { groups = split_.groups <> [ path /\ xs ] }
+                Nothing -> split_ { values = split_.values <> [ n ], rest = split_.rest <> xs }
+        split :: Array (Tree a) -> SplitV a
+        split = foldl splitF { values : [], groups : [], rest : []}
+        breakF :: Array String -> Map (Array String) (Array a) -> a -> Array (Tree a) -> Map (Array String) (Array a)
+        breakF parentPath theMap n children_ =
+            let
+                { values, groups, rest } = split children_
+            in case getPath n of
+                Just path ->
+                    let
+                        nextMap =
+                            Map.alter (alterF values) path {- (parentPath <> path) -}
+                                $ foldl
+                                    (\m (cpath /\ ts) ->
+                                        (foldl (\mc nc -> break (breakF {- (parentPath <> path <> cpath) -} cpath mc) nc) m ts)
+                                    )
+                                    theMap groups
+                    in foldl (\m nc -> break (breakF parentPath m) nc) nextMap rest
+                Nothing ->
+                    Map.alter (alterF $ pure n) parentPath
+                        $ foldl (\m nc -> break (breakF parentPath m) nc) theMap children_
 
 
 {-|
