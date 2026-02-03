@@ -119,13 +119,28 @@ catMaybes rootDefault =
  function, and after that wrap the direct children back in the values using `key -> a` function, so that:
 
  `(0 :<~ [ 10, 11, 12, 20, 22, 33, 35, 49, 77 ])`
- after `regroup (_ == 0) (_ `div` 10) (_ * 10)`
+ after `regroup (_ == 0) (_ `div` 10)`
  would become: `(0 :< [ 10 :<~ [ 10, 11, 12 ], 20 :<~ [ 20, 22 ], 30 :<~ [ 33, 35 ], 40 :<~ [ 49 ], 70 :<~ [ 77 ] ])`
 
  Notice that we need the exact root node(s) to restructure its/their children.
 |-}
-regroup :: forall a k. Ord k => (a -> Boolean) -> (a -> k) -> (k -> a) -> Tree a -> Tree a
-regroup needsRegroup valToKey keyToVal =
+regroup :: forall a k. Ord k => (a -> Boolean) -> (a -> k) -> Tree a -> Tree a
+regroup needsRegroup valToKey =
+    regroup_ needsRegroup valToKey pure
+
+
+{-| If the value in the node matches the first function, keep the value intact, but iterate
+ over all the children of this node, group the array of children by key received using `a -> key` (`Array.groupAllBy`)
+ function, and after that wrap the direct children back in the values using `key -> a` function, so that:
+
+ `(0 :<~ [ 10, 11, 12, 20, 22, 33, 35, 49, 77 ])`
+ after `regroup (_ == 0) (_ `div` 10) (const $ _ * 10)`
+ would become: `(0 :< [ 10 :<~ [ 10, 11, 12 ], 20 :<~ [ 20, 22 ], 30 :<~ [ 33, 35 ], 40 :<~ [ 49 ], 70 :<~ [ 77 ] ])`
+
+ Notice that we need the exact root node(s) to restructure its/their children.
+|-}
+regroup_ :: forall a k. Ord k => (a -> Boolean) -> (a -> k) -> (a -> k -> a) -> Tree a -> Tree a
+regroup_ needsRegroup valToKey keyToVal =
     alter \v xs ->
       if needsRegroup v then
         v /\
@@ -137,7 +152,8 @@ regroup needsRegroup valToKey keyToVal =
       compareF treeA treeB =
         compare (valToKey $ value treeA) (valToKey $ value treeB)
       makeNodeF nea =
-        node (keyToVal $ valToKey $ value $ NEA.head nea)
+        let prevVal = value $ NEA.head nea
+        in node (keyToVal prevVal $ valToKey prevVal)
           $ NEA.toArray nea
 
 

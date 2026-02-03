@@ -5,7 +5,7 @@ import Foreign (renderForeignError)
 
 import Data.String (toUpper, joinWith) as String
 import Data.Array (length, fromFoldable) as Array
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Either (Either(..))
 import Data.Tuple.Nested ((/\), type (/\))
 import Data.Int (fromString) as Int
@@ -25,7 +25,7 @@ import Test.Spec.Runner (runSpec)
 
 import Yoga.Tree (appendChild) as Tree
 import Yoga.Tree.Extended (Tree, (:<~))
-import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, alter, break, regroup) as Tree
+import Yoga.Tree.Extended (node, leaf, set, update, children, flatten, edges, alter, break, regroup, regroup_) as Tree
 import Yoga.Tree.Extended.Path (Path(..))
 import Yoga.Tree.Extended.Path (with, traverse, find, root, advance, up, toArray, startsWith, isNextFor, safeAdvance, advanceDir, dashed, Dir(..)) as Path
 import Yoga.Tree.Extended.Convert (Mode(..), fromString, readJSON, toString, writeJSON) as Convert
@@ -379,10 +379,50 @@ main = launchAff_ $ runSpec [consoleReporter] do
       let
         srcTree = 0 :<~ [ 10, 11, 12, 20, 22, 33, 35, 49, 77 ]
 
-      it "properly rebuilds tree by adding children with `rebuildTree`" $
+      it "properly rebuilds tree by adding children with `regroup`" $
         let
-          regroupedTree = srcTree # Tree.regroup (_ == 0) (_ `div` 10) (_ * 10)
+          regroupedTree = srcTree # Tree.regroup (_ == 0) (_ `div` 10)
+          expectedTree = 0 :< [ 10 :<~ [ 10, 11, 12 ], 20 :<~ [ 20, 22 ], 33 :<~ [ 33, 35 ], 49 :<~ [ 49 ], 77 :<~ [ 77 ] ]
+        in regroupedTree `compareTrees` expectedTree
+
+      it "properly rebuilds tree by adding children with `regroup`, case 2" $
+        let
+          regroupedTree = srcTree # Tree.regroup (_ == 0) identity
+          expectedTree = 0 :< [ 10 :<~ [ 10 ], 11 :<~ [ 11 ], 12 :<~ [ 12 ], 20 :<~ [ 20 ], 22 :<~ [ 22 ], 33 :<~ [ 33 ], 35 :<~ [ 35 ], 49 :<~ [ 49 ], 77 :<~ [ 77 ] ]
+        in regroupedTree `compareTrees` expectedTree
+
+      it "properly rebuilds tree by adding children with `regroup`, case 3" $
+        let
+          regroupedTree = srcTree # Tree.regroup (_ == 0) ((_ `div` 10) >>> show)
+          expectedTree = 0 :< [ 10 :<~ [ 10, 11, 12 ], 20 :<~ [ 20, 22 ], 33 :<~ [ 33, 35 ], 49 :<~ [ 49 ], 77 :<~ [ 77 ] ]
+        in regroupedTree `compareTrees` expectedTree
+
+      it "properly rebuilds tree by adding children with `regroup_`" $
+        let
+          regroupedTree = srcTree # Tree.regroup_ (_ == 0) (_ `div` 10) (const (_ * 10))
           expectedTree = 0 :< [ 10 :<~ [ 10, 11, 12 ], 20 :<~ [ 20, 22 ], 30 :<~ [ 33, 35 ], 40 :<~ [ 49 ], 70 :<~ [ 77 ] ]
+        in regroupedTree `compareTrees` expectedTree
+
+      it "properly rebuilds tree by adding children with `regroup_`, case 2" $
+        let
+          regroupedTree = srcTree # Tree.regroup_ (_ == 0) (_ `div` 10) (\a _ -> a)
+          expectedTree = 0 :< [ 10 :<~ [ 10, 11, 12 ], 20 :<~ [ 20, 22 ], 33 :<~ [ 33, 35 ], 49 :<~ [ 49 ], 77 :<~ [ 77 ] ]
+        in regroupedTree `compareTrees` expectedTree
+
+      it "properly rebuilds tree by adding children with `regroup_`, case 3" $
+        let
+          regroupedTree = srcTree # Tree.regroup_ (_ == 0) identity (\a _ -> a)
+          expectedTree = 0 :< [ 10 :<~ [ 10 ], 11 :<~ [ 11 ], 12 :<~ [ 12 ], 20 :<~ [ 20 ], 22 :<~ [ 22 ], 33 :<~ [ 33 ], 35 :<~ [ 35 ], 49 :<~ [ 49 ], 77 :<~ [ 77 ] ]
+        in regroupedTree `compareTrees` expectedTree
+
+      it "properly rebuilds tree by adding children with `regroup_`, case 4" $
+        let
+          regroupedTree = srcTree
+              # Tree.regroup_
+                  (_ == 0)
+                  ((_ `div` 10) >>> show)
+                  (\a k -> (fromMaybe 0 $ Int.fromString k) * 100 + a)
+          expectedTree = 0 :< [ 110 :<~ [ 10, 11, 12 ], 220 :<~ [ 20, 22 ], 333 :<~ [ 33, 35 ], 449 :<~ [ 49 ], 777 :<~ [ 77 ] ]
         in regroupedTree `compareTrees` expectedTree
 
     describe "conversions" $ do
