@@ -491,8 +491,7 @@ main = launchAff_ $ runSpec [consoleReporter] do
         in
           regroupedTree `compareTrees` expectedTree
 
-      {-
-      it "mergeEqual" $
+      it "regroup with int paths" $
         let
           l = Left
           r = Right
@@ -506,26 +505,90 @@ main = launchAff_ $ runSpec [consoleReporter] do
                 , pure $ r "3-1"
                 , l [ 1, 2 ] :<~ [ r "1-2-6", r "1-2-7" ]
                 , l [ 1 ] :<~ [ r "1-7" ]
+                , l [ 3 ] :<~ [ r "3-2", r "3-3" ]
+                , l [ 3, 3 ] :<~ [ r "3-3-1", r "3-3-2", r "3-3-3" ]
                 ]
             ]
           regroupedTree = srcTreeAlt
-              # Tree.mergeEqualBy
-                  compareF
-          compareF (Left ipA) (Left ipB) = ipA == ipB
-          compareF _ _ = false
+              # Tree.regroupByPath
+                (case _ of
+                  Left path -> Just path
+                  Right _ -> Nothing
+                )
+              # map (either l identity)
+          -- compareF (Left ipA) (Left ipB) = ipA == ipB
+          -- compareF _ _ = false
           expectedTree =
-            r "a" :<
-              [ l [ 1 ] :<~ [ r "1-1", r "1-2", r "1-3", r "1-4" ]
-              , l [ 1, 2 ] :<~ [ r "1-2-1", r "1-2-2", r "1-2-3", r "1-2-4", r "1-2-5" ]
+            l [] :<
+              [ l [ 1 ] :<
+                (pure <$>
+                  [ r "1-1", r "1-2", r "1-3", r "1-4", r "1-5", r "1-6", r "1-7" ]
+                )
+                <>
+                [ l [ 1, 2 ] :<~
+                  [ r "1-2-1", r "1-2-2", r "1-2-3", r "1-2-4", r "1-2-5", r "1-2-6", r "1-2-7" ]
+                ]
               , l [ 3 ] :<
                       [ pure $ r "3-1"
-                      , l [ 1 ] :<~ [ r "1-5", r "1-6", r "1-7" ]
-                      , l [ 1, 2 ] :<~ [ r "1-2-6", r "1-2-7" ]
+                      , pure $ r "3-2"
+                      , pure $ r "3-3"
+                      , l [ 3, 3 ] :<~ [ r "3-3-1", r "3-3-2", r "3-3-3" ]
                       ]
               ]
         in
           regroupedTree `compareTrees` expectedTree
-        -}
+
+      it "regroup with int paths, v.2" $
+        let
+          l = Left
+          r = Right
+          srcTreeAlt = l [] :<
+            [ l [ 1 ] :<~ [ r "1-1", r "1-2" ]
+            , l [ 1, 2 ] :<~ [ r "1-2-1", r "1-2-2", r "1-2-3" ]
+            , l [ 1 ] :<~ [ r "1-3", r "1-4" ]
+            , l [ 1, 2 ] :<~ [ r "1-2-4", r "1-2-5" ]
+            , l [ 3 ] :<
+                [ l [ 3, 1 ] :<~ [ r "3-1-1", r "3-1-2" ]
+                , pure $ r "3-1"
+                , l [ 3, 1, 2 ] :<~ [ r "3-1-2-1", r "3-1-2-2" ]
+                , l [ 3, 1 ] :<~ [ r "3-1-3" ]
+                , l [ 3 ] :<~ [ r "3-2", r "3-3" ]
+                , l [ 3, 3 ] :<~ [ r "3-3-1", r "3-3-2", r "3-3-3" ]
+                ]
+            ]
+          regroupedTree = srcTreeAlt
+              # Tree.regroupByPath
+                (case _ of
+                  Left path -> Just path
+                  Right _ -> Nothing
+                )
+              # map (either l identity)
+          -- compareF (Left ipA) (Left ipB) = ipA == ipB
+          -- compareF _ _ = false
+          expectedTree =
+            l [] :<
+              [ l [ 1 ] :<
+                (pure <$>
+                  [ r "1-1", r "1-2", r "1-3", r "1-4" ]
+                )
+                <>
+                [ l [ 1, 2 ] :<~
+                  [ r "1-2-1", r "1-2-2", r "1-2-3", r "1-2-4", r "1-2-5" ]
+                ]
+              , l [ 3 ] :<
+                      [ pure $ r "3-1"
+                      , pure $ r "3-2"
+                      , pure $ r "3-3"
+                      , l [ 3, 1 ]
+                          :<
+                          [ pure $ r "3-1-1", pure $ r "3-1-2", pure $ r "3-1-3"
+                          , l [ 3, 1, 2 ] :<~ [ r "3-1-2-1", r "3-1-2-2" ]
+                          ]
+                      , l [ 3, 3 ] :<~ [r "3-3-1", r "3-3-2", r "3-3-3" ]
+                      ]
+              ]
+        in
+          regroupedTree `compareTrees` expectedTree
 
 
     describe "conversions" $ do
