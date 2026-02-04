@@ -180,31 +180,37 @@ type PathsCollectedMap i = Map (Array i) Boolean
 type RegroupedChildren i a = Array (Tree (RegroupV i a))
 
 
-{-| Group children by path hierarchy, merging nodes with identical paths. |-}
-regroupByPath :: forall a i. Ord i => Eq a => (a -> Maybe (Array i)) -> Tree a -> Tree (RegroupV i a)
+{-| Group children by path hierarchy, merging nodes with identical paths. See tests for the examples. |-}
+regroupByPath :: forall a i. Ord i => (a -> Maybe (Array i)) -> Tree a -> Tree (RegroupV i a)
 regroupByPath getPath tree =
     pathsLoop [] 1
     # node (Left [])
     where
+
+        -- at first, collect paths and their children into the `Map`, where key is the path and the value is the array of non-path children
         pathToValues = tree # break (breakF [] Map.empty)
+        -- use the array of all discovered paths as the base to build the tree again
         allPaths =
             pathToValues
             # Map.keys
             # Set.toUnfoldable
             # Array.sort
-        maxLength :: Int
-        maxLength = allPaths <#> Array.length # foldl max 0
+
+        maxPathLength :: Int
+        maxPathLength = allPaths <#> Array.length # foldl max 0
         nextPathsOf parent n =
             allPaths # Array.filter
                 (\path ->
                     (Array.length path == Array.length parent + n)
                     && foldlWithIndex (equalSegment parent) true (Array.dropEnd n path)
                 )
+
         equalSegment :: Array i -> Int -> Boolean -> i -> Boolean
         equalSegment parent segIdx before chSeg = before && (Array.index parent segIdx <#> (_ == chSeg) # fromMaybe false)
+
         pathsLoop :: Array i -> Int -> Array (Tree (RegroupV i a))
         pathsLoop parent n =
-            if (n < maxLength) then
+            if (n < maxPathLength) then -- keep trying to find child paths while we don't reach the maximum possible length
                 let nextPaths = nextPathsOf parent n
                 in case nextPaths of
                     [] -> pathsLoop parent $ n + 1
@@ -225,11 +231,6 @@ regroupByPath getPath tree =
                             nextPaths
             else []
 
-        -- postFoldlF :: (PathsCollectedMap /\ RegroupedChildren a) -> Array String -> (PathsCollectedMap /\ RegroupedChildren a)
-        -- postFoldlF (pathsCollected /\ collected) = ?wh
-        -- newNodeFor :: (Array String /\ Array a) -> Tree (RegroupV a)
-
-        -- rootVal = value tree
         alterF :: Array a -> Maybe (Array a) -> Maybe (Array a)
         alterF toAppend Nothing = Just toAppend
         alterF toAppend (Just arr) = Just $ arr <> toAppend
@@ -240,6 +241,7 @@ regroupByPath getPath tree =
                 Nothing -> split_ { values = split_.values <> [ n ], rest = split_.rest <> xs }
         split :: Array (Tree a) -> SplitV i a
         split = foldl splitF { values : [], groups : [], rest : []}
+
         breakF :: Array i -> Map (Array i) (Array a) -> a -> Array (Tree a) -> Map (Array i) (Array a)
         breakF parentPath theMap n children_ =
             let
@@ -248,10 +250,10 @@ regroupByPath getPath tree =
                 Just path ->
                     let
                         nextMap =
-                            Map.alter (alterF values) path {- (parentPath <> path) -}
+                            Map.alter (alterF values) path
                                 $ foldl
                                     (\m (cpath /\ ts) ->
-                                        (foldl (\mc nc -> break (breakF {- (parentPath <> path <> cpath) -} cpath mc) nc) m ts)
+                                        (foldl (\mc nc -> break (breakF cpath mc) nc) m ts)
                                     )
                                     theMap groups
                     in foldl (\m nc -> break (breakF parentPath m) nc) nextMap rest
