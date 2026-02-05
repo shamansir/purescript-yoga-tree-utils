@@ -162,34 +162,29 @@ regroup_ needsRegroup valToKey keyToVal =
         in node (keyToVal prevVal $ valToKey prevVal)
           $ NEA.toArray nea
 
-data PHelper a
-    = G (Array String)
-    | N a
 
-
-extractA :: forall a. (Array String -> a) -> PHelper a -> a
-extractA pToA (G path) = pToA path
-extractA _    (N a) = a
-
-
-type RegroupV i a = Either (Array i) a
-type SplitV i a = { values :: Array a, groups :: Array (Array i /\ Array (Tree a)), rest :: Array (Tree a) }
-
-
-type PathsCollectedMap i = Map (Array i) Boolean
-type RegroupedChildren i a = Array (Tree (RegroupV i a))
+type Path i = Array i
+type PathOrValue i a = Either (Path i) a
+type SplitV i a =
+    { values :: Array a
+    , groups :: Array (Path i /\ Array (Tree a))
+    , rest :: Array (Tree a)
+    }
 
 
 {-| Group children by path hierarchy, merging nodes with identical paths. See tests for the examples. |-}
-regroupByPath :: forall a i. Ord i => (a -> Maybe (Array i)) -> Tree a -> Tree (RegroupV i a)
+regroupByPath :: forall a i. Ord i => (a -> Maybe (Path i)) -> Tree a -> Tree (PathOrValue i a)
 regroupByPath getPath tree =
     pathsLoop [] 1
     # node (Left [])
     where
 
         -- at first, collect paths and their children into the `Map`, where key is the path and the value is the array of non-path children
+        pathToValues :: Map (Path i) (Array a)
         pathToValues = tree # break (breakF [] Map.empty)
+
         -- use the array of all discovered paths as the base to build the tree again
+        allPaths :: Array (Path i)
         allPaths =
             pathToValues
             # Map.keys
@@ -198,6 +193,7 @@ regroupByPath getPath tree =
 
         maxPathLength :: Int
         maxPathLength = allPaths <#> Array.length # foldl max 0
+
         nextPathsOf parent n =
             allPaths # Array.filter
                 (\path ->
@@ -208,7 +204,7 @@ regroupByPath getPath tree =
         equalSegment :: Array i -> Int -> Boolean -> i -> Boolean
         equalSegment parent segIdx before chSeg = before && (Array.index parent segIdx <#> (_ == chSeg) # fromMaybe false)
 
-        pathsLoop :: Array i -> Int -> Array (Tree (RegroupV i a))
+        pathsLoop :: Array i -> Int -> Array (Tree (PathOrValue i a))
         pathsLoop parent n =
             if (n < maxPathLength) then -- keep trying to find child paths while we don't reach the maximum possible length
                 let nextPaths = nextPathsOf parent n
@@ -219,11 +215,11 @@ regroupByPath getPath tree =
                             (\prev npath ->
                                 prev
                                 <> [
-                                        node (Left npath) $
-                                        ( map (Right >>> leaf)
-                                        $ fromMaybe []
-                                        $ Map.lookup npath pathToValues
-                                        )
+                                        node (Left npath)
+                                        $ ( map (Right >>> leaf)
+                                            $ fromMaybe []
+                                            $ Map.lookup npath pathToValues
+                                            )
                                         <> pathsLoop npath 1
                                     ]
                             )
@@ -234,6 +230,7 @@ regroupByPath getPath tree =
         alterF :: Array a -> Maybe (Array a) -> Maybe (Array a)
         alterF toAppend Nothing = Just toAppend
         alterF toAppend (Just arr) = Just $ arr <> toAppend
+
         splitF :: SplitV i a -> Tree a -> SplitV i a
         splitF split_ = break \n xs ->
             case getPath n of
@@ -242,7 +239,7 @@ regroupByPath getPath tree =
         split :: Array (Tree a) -> SplitV i a
         split = foldl splitF { values : [], groups : [], rest : []}
 
-        breakF :: Array i -> Map (Array i) (Array a) -> a -> Array (Tree a) -> Map (Array i) (Array a)
+        breakF :: Array i -> Map (Path i) (Array a) -> a -> Array (Tree a) -> Map (Path i) (Array a)
         breakF parentPath theMap n children_ =
             let
                 { values, groups, rest } = split children_
